@@ -55,6 +55,26 @@ Route::view('/wastage-reuse', 'modules.wastage-reuse')->name('operations.wastage
 Route::view('/dispatch-challan', 'modules.dispatch-challan')->name('operations.dispatch-challan');
 Route::view('/team-ledger', 'modules.team-ledger')->name('operations.team-ledger');
 Route::view('/team-payments', 'modules.team-payments')->name('operations.team-payments');
+Route::view('/inventory-reports', 'modules.report', [
+    'title' => 'Inventory Reports',
+    'reportKey' => 'inventory',
+    'description' => 'Stock availability, low stock signals, and inventory valuation overview.',
+])->name('operations.inventory-reports');
+Route::view('/production-reports', 'modules.report', [
+    'title' => 'Production Reports',
+    'reportKey' => 'production',
+    'description' => 'Production output, status mix, and team-wise production activity.',
+])->name('operations.production-reports');
+Route::view('/dispatch-reports', 'modules.report', [
+    'title' => 'Dispatch Reports',
+    'reportKey' => 'dispatch',
+    'description' => 'Dispatch challan movement, team allocation, and shipment totals.',
+])->name('operations.dispatch-reports');
+Route::view('/payment-reports', 'modules.report', [
+    'title' => 'Payment Reports',
+    'reportKey' => 'payment',
+    'description' => 'Team payment settlements, pending dues, and payment history.',
+])->name('operations.payment-reports');
 Route::view('/items', 'modules.items')->name('modules.items');
 Route::redirect('/parties', '/customers')->name('modules.parties');
 Route::get('/customers', fn () => view('modules.party-directory', [
@@ -86,7 +106,7 @@ foreach ($masterModules as $slug => $title) {
 }
 
 foreach ($operations as $slug => $title) {
-    if (in_array($slug, ['grn', 'stock-ledger','overall-stock-summary', 'stock-summary', 'stock-verification', 'bom', 'production', 'wastage', 'wastage-reuse', 'dispatch-challan', 'team-ledger', 'team-payments'], true)) {
+    if (in_array($slug, ['grn', 'stock-ledger','overall-stock-summary', 'stock-summary', 'stock-verification', 'bom', 'production', 'wastage', 'wastage-reuse', 'dispatch-challan', 'team-ledger', 'team-payments', 'inventory-reports', 'production-reports', 'dispatch-reports', 'payment-reports'], true)) {
         continue;
     }
 
