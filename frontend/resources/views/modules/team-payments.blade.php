@@ -54,15 +54,13 @@
                         <th class="text-end"><button class="sort-head sort-end" data-sort="gross_amount" type="button">Gross Amount <i data-lucide="chevrons-up-down"></i></button></th>
                         <th class="text-end"><button class="sort-head sort-end" data-sort="tds_amount" type="button">TDS Amount <i data-lucide="chevrons-up-down"></i></button></th>
                         <th class="text-end"><button class="sort-head sort-end" data-sort="net_payable" type="button">Net Payable <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th class="text-end"><button class="sort-head sort-end" data-sort="paid_amount" type="button">Paid Amount <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th class="text-end"><button class="sort-head sort-end" data-sort="pending_amount" type="button">Pending <i data-lucide="chevrons-up-down"></i></button></th>
                         <th><button class="sort-head" data-sort="updated_by_name" type="button">Updated By <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th class="text-end action-col">Actions</th>
+                        <th class="text-end action-col">Operation</th>
                     </tr>
                 </thead>
                 <tbody id="rows">
-                    <tr class="skeleton-row"><td colspan="10"></td></tr>
-                    <tr class="skeleton-row"><td colspan="10"></td></tr>
+                    <tr class="skeleton-row"><td colspan="9"></td></tr>
+                    <tr class="skeleton-row"><td colspan="9"></td></tr>
                 </tbody>
             </table>
         </div>
@@ -150,7 +148,6 @@ let rowsEl;
 let pageLinksEl;
 let pageStatusEl;
 let filterRowEl;
-let activePayment = null;
 const storedUser = (() => {
     try {
         return JSON.parse(localStorage.getItem('user') || '{}');
@@ -159,8 +156,6 @@ const storedUser = (() => {
     }
 })();
 const hasPermission = (permission) => storedUser.role_name === 'Super Admin' || (storedUser.permissions || []).includes(permission);
-const canManagePayments = hasPermission('accounts.manage');
-
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;',
     '<': '&lt;',
@@ -208,14 +203,14 @@ function renderRows() {
             <td class="text-end">${money(row.gross_amount)}</td>
             <td class="text-end">${money(row.tds_amount)}</td>
             <td class="text-end">${money(row.net_payable)}</td>
-            <td class="text-end">${money(row.paid_amount)}</td>
-            <td class="text-end">${money(row.pending_amount)}</td>
             <td>${escapeHtml(row.updated_by_name || row.created_by_name || '')}</td>
             <td class="text-end">
-                ${canManagePayments && Number(row.pending_amount || 0) > 0 ? `<button class="icon-btn action-pay" type="button" data-pay="${row.payment_id}" title="Add Payment"><i data-lucide="wallet"></i></button>` : ''}
+                <span class="dispatch-actions">
+                    <button class="icon-btn action-view" type="button" data-view="${row.payment_id}" title="View"><i data-lucide="eye"></i></button>
+                </span>
             </td>
         </tr>
-    `).join('') : '<tr><td colspan="10" class="text-muted">No payment summaries found.</td></tr>';
+    `).join('') : '<tr><td colspan="9" class="text-muted">No payment summaries found.</td></tr>';
     lucide?.createIcons();
 }
 
@@ -245,7 +240,7 @@ function renderPager() {
 
 async function load(p = 1) {
     page = p;
-    rowsEl.innerHTML = '<tr class="skeleton-row"><td colspan="10"></td></tr><tr class="skeleton-row"><td colspan="10"></td></tr>';
+    rowsEl.innerHTML = '<tr class="skeleton-row"><td colspan="9"></td></tr><tr class="skeleton-row"><td colspan="9"></td></tr>';
     const response = await axios.get(endpoint, { params: params() });
     const payload = response.data.data;
     rowsData = payload.data || [];
@@ -265,7 +260,7 @@ function resetFilters() {
 }
 
 function csvExport() {
-    const headers = ['Team', 'Month', 'Year', 'Dispatch Qty', 'Gross Amount', 'TDS Amount', 'Net Payable', 'Paid Amount', 'Pending Amount', 'Updated By'];
+    const headers = ['Team', 'Month', 'Year', 'Dispatch Qty', 'Gross Amount', 'TDS Amount', 'Net Payable', 'Updated By'];
     const csv = [headers.join(','), ...rowsData.map((row) => [
         row.team_name,
         monthName(row.payment_month),
@@ -274,8 +269,6 @@ function csvExport() {
         row.gross_amount,
         row.tds_amount,
         row.net_payable,
-        row.paid_amount,
-        row.pending_amount,
         row.updated_by_name || row.created_by_name || '',
     ].map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -287,17 +280,8 @@ function csvExport() {
 }
 
 function paymentHistoryHtml(entries) {
-    if (!entries.length) return '<p class="text-muted" style="margin:0;">No payment history yet.</p>';
-    return `
-        <div class="table-responsive" style="margin-top:14px;">
-            <table class="table">
-                <thead><tr><th>Date</th><th>Mode</th><th class="text-end">Amount</th><th>Reference</th></tr></thead>
-                <tbody>
-                    ${entries.map((entry) => `<tr><td>${escapeHtml(entry.payment_date || '')}</td><td>${escapeHtml(entry.payment_mode || '')}</td><td class="text-end">${money(entry.payment_amount)}</td><td>${escapeHtml(entry.reference_no || '')}</td></tr>`).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
+    if (!entries.length) return '<p class="text-muted" style="margin:0;">No payment history available in summary-only mode.</p>';
+    return '';
 }
 
 function paymentModalBody(summary, entries = []) {
@@ -308,65 +292,27 @@ function paymentModalBody(summary, entries = []) {
                 <div class="field"><i data-lucide="calendar"></i><label>Month</label><input value="${escapeHtml(monthName(summary?.payment_month))}" disabled></div>
                 <div class="field"><i data-lucide="calendar-range"></i><label>Year</label><input value="${escapeHtml(summary?.payment_year || '')}" disabled></div>
                 <div class="field"><i data-lucide="scale"></i><label>Net Payable</label><input value="${money(summary?.net_payable)}" disabled></div>
-                <div class="field"><i data-lucide="hand-coins"></i><label>Paid Amount</label><input value="${money(summary?.paid_amount)}" disabled></div>
-                <div class="field"><i data-lucide="wallet"></i><label>Pending Amount</label><input value="${money(summary?.pending_amount)}" disabled></div>
-                <div class="field"><i data-lucide="calendar-plus"></i><label>Payment Date *</label><input id="payment-date" type="date"></div>
-                <div class="field"><i data-lucide="badge-info"></i><label>Payment Mode *</label><select id="payment-mode">
-                    <option value="">Select mode</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Other">Other</option>
-                </select></div>
-                <div class="field"><i data-lucide="indian-rupee"></i><label>Payment Amount *</label><input id="payment-amount" type="number" step="0.01" min="0.01" value="${Number(summary?.pending_amount || 0).toFixed(2)}"></div>
-                <div class="field"><i data-lucide="hash"></i><label>Reference No</label><input id="payment-reference" type="text"></div>
-                <div class="field" style="grid-column:1/-1"><i data-lucide="message-square"></i><label>Remarks</label><textarea id="payment-remarks"></textarea></div>
             </div>
             <div class="payment-history-card">
-                <h3 class="erp-card-title" style="margin-top:0;">Payment History</h3>
+                <h3 class="erp-card-title" style="margin-top:0;">Summary Note</h3>
                 ${paymentHistoryHtml(entries)}
             </div>
-            <div id="payment-errors" class="form-errors" hidden></div>
         </div>
     `;
 }
 
-async function openPaymentModal(paymentId) {
+async function openViewModal(paymentId) {
     const response = await axios.get(`${endpoint}/${paymentId}`);
     const summary = response.data.data.summary;
     const entries = response.data.data.entries || [];
-    activePayment = summary;
     window.ErpModal.open({
-        title: 'Add Team Payment',
-        subtitle: 'Post a payment against the current pending balance.',
+        title: 'View Team Payment',
+        subtitle: 'Read-only summary-only view.',
         size: 'lg',
         body: paymentModalBody(summary, entries),
-        footer: '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-action="save-payment"><i data-lucide="save"></i> Save Payment</button>',
+        footer: '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button>',
     });
-    document.getElementById('payment-date').valueAsDate = new Date();
-    document.getElementById('payment-mode').value = 'Cash';
     lucide?.createIcons();
-}
-
-async function savePayment() {
-    const box = document.getElementById('payment-errors');
-    box.hidden = true;
-    try {
-        await axios.post(`${endpoint}/${activePayment.payment_id}/payments`, {
-            payment_date: document.getElementById('payment-date').value,
-            payment_mode: document.getElementById('payment-mode').value,
-            payment_amount: document.getElementById('payment-amount').value,
-            reference_no: document.getElementById('payment-reference').value,
-            remarks: document.getElementById('payment-remarks').value,
-        });
-        window.ErpModal.close();
-        await load(page);
-        window.ErpToast?.show('Team payment saved.');
-    } catch (error) {
-        box.textContent = error.normalizedMessage || 'Unable to save team payment.';
-        box.hidden = false;
-    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -393,9 +339,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (target) load(Number(target.dataset.page));
     });
     rowsEl.addEventListener('click', async (event) => {
-        const paymentId = event.target.closest('[data-pay]')?.dataset.pay;
-        if (!paymentId) return;
-        await openPaymentModal(paymentId).catch((error) => window.ErpToast?.show(error.normalizedMessage || 'Unable to open payment form.', 'danger'));
+        const viewId = event.target.closest('[data-view]')?.dataset.view;
+        if (viewId) {
+            await openViewModal(viewId).catch((error) => window.ErpToast?.show(error.normalizedMessage || 'Unable to open payment summary.', 'danger'));
+            return;
+        }
     });
     document.querySelector('[data-action="export"]').addEventListener('click', csvExport);
     document.querySelector('[data-action="print"]').addEventListener('click', () => window.print());
@@ -404,9 +352,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         else { sortBy = this.dataset.sort; sortDirection = 'asc'; }
         load(1);
     }));
-    document.addEventListener('click', (event) => {
-        if (event.target.closest('[data-action="save-payment"]')) savePayment();
-    });
     [per_page, team_id, payment_month, payment_year].forEach((input) => input.addEventListener('change', () => load(1)));
     search.addEventListener('input', () => {
         window.clearTimeout(searchTimer);
