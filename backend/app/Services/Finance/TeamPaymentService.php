@@ -5,6 +5,7 @@ namespace App\Services\Finance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TeamPaymentService
 {
@@ -77,29 +78,7 @@ class TeamPaymentService
 
     public function paginate(Request $request)
     {
-        $user = $request->user();
-
-        $query = DB::table('team_payment_summary')
-            ->leftJoin('team_master', 'team_payment_summary.team_id', '=', 'team_master.team_id')
-            ->leftJoin('users as creator', 'team_payment_summary.created_by', '=', 'creator.id')
-            ->leftJoin('users as updater', 'team_payment_summary.updated_by', '=', 'updater.id')
-            ->where('team_payment_summary.tenant_id', $user->tenant_id)
-            ->when($user->branch_id, fn ($builder) => $builder->where('team_payment_summary.branch_id', $user->branch_id))
-            ->select([
-                'team_payment_summary.payment_id',
-                'team_payment_summary.payment_month',
-                'team_payment_summary.payment_year',
-                'team_payment_summary.dispatch_qty',
-                'team_payment_summary.gross_amount',
-                'team_payment_summary.tds_amount',
-                'team_payment_summary.net_payable',
-                'team_master.team_code',
-                'team_master.team_name',
-                'team_master.rate_per_pallet',
-                'team_master.tds_percent',
-                'creator.full_name as created_by_name',
-                'updater.full_name as updated_by_name',
-            ]);
+        $query = $this->summaryQuery($request);
 
         $search = trim((string) $request->query('search', ''));
         if ($search !== '') {
@@ -129,6 +108,8 @@ class TeamPaymentService
             'gross_amount' => 'team_payment_summary.gross_amount',
             'tds_amount' => 'team_payment_summary.tds_amount',
             'net_payable' => 'team_payment_summary.net_payable',
+            'paid_amount' => 'paid_amount',
+            'pending_amount' => 'pending_amount',
         ];
 
         $sortBy = $sortMap[$request->query('sort_by', 'payment_year')] ?? 'team_payment_summary.payment_year';
@@ -146,28 +127,130 @@ class TeamPaymentService
 
     public function find(Request $request, int $paymentId): object
     {
-        $user = $request->user();
-
-        return DB::table('team_payment_summary')
-            ->leftJoin('team_master', 'team_payment_summary.team_id', '=', 'team_master.team_id')
-            ->where('team_payment_summary.tenant_id', $user->tenant_id)
-            ->when($user->branch_id, fn ($builder) => $builder->where('team_payment_summary.branch_id', $user->branch_id))
+        return $this->summaryQuery($request)
             ->where('team_payment_summary.payment_id', $paymentId)
-            ->select([
-                'team_payment_summary.*',
-                'team_master.team_code',
-                'team_master.team_name',
-            ])
             ->firstOrFail();
     }
 
     public function paymentHistory(Request $request, int $paymentId): Collection
     {
-        return collect();
+        $summary = $this->find($request, $paymentId);
+
+        return DB::table('team_payment_entry')
+            ->leftJoin('users as creator', 'team_payment_entry.created_by', '=', 'creator.id')
+            ->where('team_payment_entry.tenant_id', $summary->tenant_id)
+            ->where('team_payment_entry.branch_id', $summary->branch_id)
+            ->where('team_payment_entry.team_id', $summary->team_id)
+            ->where('team_payment_entry.payment_month', $summary->payment_month)
+            ->where('team_payment_entry.payment_year', $summary->payment_year)
+            ->select([
+                'team_payment_entry.entry_id',
+                'team_payment_entry.payment_date',
+                'team_payment_entry.payment_mode',
+                'team_payment_entry.reference_no',
+                'team_payment_entry.payment_amount',
+                'team_payment_entry.remarks',
+                'team_payment_entry.created_at',
+                'creator.full_name as created_by_name',
+            ])
+            ->orderByDesc('team_payment_entry.payment_date')
+            ->orderByDesc('team_payment_entry.entry_id')
+            ->get();
     }
 
     public function addPayment(Request $request, int $paymentId, array $data): object
     {
-        throw new \RuntimeException('Payment entry operations are disabled for team_payment_summary-only mode.');
+        $summary = $this->find($request, $paymentId);
+        $pendingAmount = (float) $summary->pending_amount;
+
+        if ($pendingAmount <= 0) {
+            throw ValidationException::withMessages([
+                'payment_amount' => 'This team payment has no pending amount left.',
+            ]);
+        }
+
+        $payload = validator($data, [
+            'payment_amount' => ['required', 'numeric', 'gt:0', 'lte:'.$pendingAmount],
+            'payment_date' => ['required', 'date'],
+            'payment_mode' => ['required', 'string', 'max:30'],
+            'reference_no' => ['nullable', 'string', 'max:100'],
+            'remarks' => ['nullable', 'string'],
+        ])->validate();
+
+        $user = $request->user();
+
+        $entryId = DB::table('team_payment_entry')->insertGetId([
+            'tenant_id' => $summary->tenant_id,
+            'branch_id' => $summary->branch_id,
+            'team_id' => $summary->team_id,
+            'payment_month' => $summary->payment_month,
+            'payment_year' => $summary->payment_year,
+            'payment_amount' => $payload['payment_amount'],
+            'payment_date' => $payload['payment_date'],
+            'payment_mode' => $payload['payment_mode'],
+            'reference_no' => $payload['reference_no'] ?? null,
+            'remarks' => $payload['remarks'] ?? null,
+            'created_by' => $user?->getKey(),
+            'updated_by' => $user?->getKey(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ], 'entry_id');
+
+        return (object) [
+            'entry_id' => $entryId,
+            'paid_amount' => $payload['payment_amount'],
+            'pending_amount' => max($pendingAmount - (float) $payload['payment_amount'], 0),
+        ];
+    }
+
+    private function summaryQuery(Request $request)
+    {
+        $user = $request->user();
+
+        $paymentTotals = DB::table('team_payment_entry')
+            ->select([
+                'tenant_id',
+                'branch_id',
+                'team_id',
+                'payment_month',
+                'payment_year',
+                DB::raw('SUM(payment_amount) as paid_amount'),
+            ])
+            ->when($user->branch_id, fn ($builder) => $builder->where('branch_id', $user->branch_id))
+            ->groupBy('tenant_id', 'branch_id', 'team_id', 'payment_month', 'payment_year');
+
+        return DB::table('team_payment_summary')
+            ->leftJoin('team_master', 'team_payment_summary.team_id', '=', 'team_master.team_id')
+            ->leftJoin('users as creator', 'team_payment_summary.created_by', '=', 'creator.id')
+            ->leftJoin('users as updater', 'team_payment_summary.updated_by', '=', 'updater.id')
+            ->leftJoinSub($paymentTotals, 'payment_totals', function ($join): void {
+                $join->on('team_payment_summary.tenant_id', '=', 'payment_totals.tenant_id')
+                    ->on('team_payment_summary.branch_id', '=', 'payment_totals.branch_id')
+                    ->on('team_payment_summary.team_id', '=', 'payment_totals.team_id')
+                    ->on('team_payment_summary.payment_month', '=', 'payment_totals.payment_month')
+                    ->on('team_payment_summary.payment_year', '=', 'payment_totals.payment_year');
+            })
+            ->where('team_payment_summary.tenant_id', $user->tenant_id)
+            ->when($user->branch_id, fn ($builder) => $builder->where('team_payment_summary.branch_id', $user->branch_id))
+            ->select([
+                'team_payment_summary.payment_id',
+                'team_payment_summary.tenant_id',
+                'team_payment_summary.branch_id',
+                'team_payment_summary.team_id',
+                'team_payment_summary.payment_month',
+                'team_payment_summary.payment_year',
+                'team_payment_summary.dispatch_qty',
+                'team_payment_summary.gross_amount',
+                'team_payment_summary.tds_amount',
+                'team_payment_summary.net_payable',
+                DB::raw('COALESCE(payment_totals.paid_amount, 0) as paid_amount'),
+                DB::raw('GREATEST(team_payment_summary.net_payable - COALESCE(payment_totals.paid_amount, 0), 0) as pending_amount'),
+                'team_master.team_code',
+                'team_master.team_name',
+                'team_master.rate_per_pallet',
+                'team_master.tds_percent',
+                'creator.full_name as created_by_name',
+                'updater.full_name as updated_by_name',
+            ]);
     }
 }

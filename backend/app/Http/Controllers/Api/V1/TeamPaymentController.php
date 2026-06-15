@@ -56,9 +56,20 @@ class TeamPaymentController extends Controller
 
     public function pay(Request $request, int $id): JsonResponse
     {
+        $payload = $request->validate([
+            'payment_amount' => ['required', 'numeric', 'gt:0'],
+            'payment_date' => ['required', 'date'],
+            'payment_mode' => ['required', 'string', 'max:30'],
+            'reference_no' => ['nullable', 'string', 'max:100'],
+            'remarks' => ['nullable', 'string'],
+        ]);
+
+        $entry = $this->payments->addPayment($request, $id, $payload);
+
         return response()->json([
-            'success' => false,
-            'message' => 'Payment entry operations are disabled for team_payment_summary-only mode.',
+            'success' => true,
+            'message' => 'Team payment recorded.',
+            'data' => $entry,
         ]);
     }
 
@@ -68,7 +79,7 @@ class TeamPaymentController extends Controller
 
         return response()->streamDownload(function () use ($rows): void {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Team', 'Month', 'Year', 'Dispatch Qty', 'Gross Amount', 'TDS Amount', 'Net Payable', 'Updated By']);
+            fputcsv($handle, ['Team', 'Month', 'Year', 'Dispatch Qty', 'Gross Amount', 'TDS Amount', 'Net Payable', 'Paid Amount', 'Pending Amount', 'Updated By']);
             foreach ($rows as $row) {
                 fputcsv($handle, [
                     $row->team_name,
@@ -78,6 +89,8 @@ class TeamPaymentController extends Controller
                     $row->gross_amount,
                     $row->tds_amount,
                     $row->net_payable,
+                    $row->paid_amount ?? 0,
+                    $row->pending_amount ?? 0,
                     $row->updated_by_name ?? $row->created_by_name ?? '',
                 ]);
             }

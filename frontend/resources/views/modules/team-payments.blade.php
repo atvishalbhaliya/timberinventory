@@ -54,6 +54,7 @@
                         <th class="text-end"><button class="sort-head sort-end" data-sort="gross_amount" type="button">Gross Amount <i data-lucide="chevrons-up-down"></i></button></th>
                         <th class="text-end"><button class="sort-head sort-end" data-sort="tds_amount" type="button">TDS Amount <i data-lucide="chevrons-up-down"></i></button></th>
                         <th class="text-end"><button class="sort-head sort-end" data-sort="net_payable" type="button">Net Payable <i data-lucide="chevrons-up-down"></i></button></th>
+                        <th class="text-end"><button class="sort-head sort-end" data-sort="pending_amount" type="button">Pending Amount <i data-lucide="chevrons-up-down"></i></button></th>
                         <th><button class="sort-head" data-sort="updated_by_name" type="button">Updated By <i data-lucide="chevrons-up-down"></i></button></th>
                         <th class="text-end action-col">Operation</th>
                     </tr>
@@ -100,7 +101,7 @@
     .payment-table-toolbar .module-search > svg { color:#cbd5e1; stroke:#cbd5e1; }
     .payment-table-toolbar .module-search input { padding-right:38px; }
     .payment-data-table-wrap { max-height:calc(100vh - 360px); min-height:320px; margin:0 20px 16px; overflow:auto; }
-    .payment-data-table { min-width:1380px; table-layout:auto; border-collapse:separate; border-spacing:0; }
+    .payment-data-table { min-width:1480px; table-layout:auto; border-collapse:separate; border-spacing:0; }
     .payment-data-table th, .payment-data-table td { border-right:1px solid color-mix(in srgb, var(--border) 54%, transparent); border-bottom:1px solid color-mix(in srgb, var(--border) 54%, transparent); }
     .payment-data-table th:last-child, .payment-data-table td:last-child { border-right:0; }
     .payment-data-table th { top:0; z-index:4; height:44px; padding:0 12px; vertical-align:middle; white-space:nowrap; letter-spacing:0; }
@@ -111,6 +112,7 @@
     .sort-head svg { width:15px; height:15px; opacity:.7; }
     .sort-head.is-active { color:var(--primary); }
     .sort-head.is-active svg { opacity:1; }
+    .dispatch-actions .action-pay { color:#16a34a; }
     .payment-list-card .pagination-row { justify-content:space-between; padding-inline:20px; }
     .payment-list-card .pager-actions { justify-content:flex-start; margin-left:0; flex-wrap:wrap; }
     .payment-list-card .pager-actions .btn-erp { min-height:36px; padding:7px 10px; }
@@ -156,6 +158,7 @@ const storedUser = (() => {
     }
 })();
 const hasPermission = (permission) => storedUser.role_name === 'Super Admin' || (storedUser.permissions || []).includes(permission);
+const canManagePayments = hasPermission('accounts.manage');
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;',
     '<': '&lt;',
@@ -203,14 +206,16 @@ function renderRows() {
             <td class="text-end">${money(row.gross_amount)}</td>
             <td class="text-end">${money(row.tds_amount)}</td>
             <td class="text-end">${money(row.net_payable)}</td>
+            <td class="text-end">${money(row.pending_amount)}</td>
             <td>${escapeHtml(row.updated_by_name || row.created_by_name || '')}</td>
             <td class="text-end">
                 <span class="dispatch-actions">
                     <button class="icon-btn action-view" type="button" data-view="${row.payment_id}" title="View"><i data-lucide="eye"></i></button>
+                    ${canManagePayments && Number(row.pending_amount || 0) > 0 ? `<button class="icon-btn action-pay" type="button" data-pay="${row.payment_id}" title="Record payment"><i data-lucide="credit-card"></i></button>` : ''}
                 </span>
             </td>
         </tr>
-    `).join('') : '<tr><td colspan="9" class="text-muted">No payment summaries found.</td></tr>';
+    `).join('') : '<tr><td colspan="10" class="text-muted">No payment summaries found.</td></tr>';
     lucide?.createIcons();
 }
 
@@ -240,7 +245,7 @@ function renderPager() {
 
 async function load(p = 1) {
     page = p;
-    rowsEl.innerHTML = '<tr class="skeleton-row"><td colspan="9"></td></tr><tr class="skeleton-row"><td colspan="9"></td></tr>';
+    rowsEl.innerHTML = '<tr class="skeleton-row"><td colspan="10"></td></tr><tr class="skeleton-row"><td colspan="10"></td></tr>';
     const response = await axios.get(endpoint, { params: params() });
     const payload = response.data.data;
     rowsData = payload.data || [];
@@ -260,7 +265,7 @@ function resetFilters() {
 }
 
 function csvExport() {
-    const headers = ['Team', 'Month', 'Year', 'Dispatch Qty', 'Gross Amount', 'TDS Amount', 'Net Payable', 'Updated By'];
+    const headers = ['Team', 'Month', 'Year', 'Dispatch Qty', 'Gross Amount', 'TDS Amount', 'Net Payable', 'Paid Amount', 'Pending Amount', 'Updated By'];
     const csv = [headers.join(','), ...rowsData.map((row) => [
         row.team_name,
         monthName(row.payment_month),
@@ -269,6 +274,8 @@ function csvExport() {
         row.gross_amount,
         row.tds_amount,
         row.net_payable,
+        row.paid_amount,
+        row.pending_amount,
         row.updated_by_name || row.created_by_name || '',
     ].map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -280,8 +287,35 @@ function csvExport() {
 }
 
 function paymentHistoryHtml(entries) {
-    if (!entries.length) return '<p class="text-muted" style="margin:0;">No payment history available in summary-only mode.</p>';
-    return '';
+    if (!entries.length) return '<p class="text-muted" style="margin:0;">No payment history recorded yet.</p>';
+    return `
+        <div class="table-responsive">
+            <table class="table" style="min-width:760px;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Mode</th>
+                        <th>Reference</th>
+                        <th class="text-end">Amount</th>
+                        <th>Created By</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${entries.map((entry) => `
+                        <tr>
+                            <td>${escapeHtml(entry.payment_date || '')}</td>
+                            <td>${escapeHtml(entry.payment_mode || '')}</td>
+                            <td>${escapeHtml(entry.reference_no || '')}</td>
+                            <td class="text-end">${money(entry.payment_amount)}</td>
+                            <td>${escapeHtml(entry.created_by_name || '')}</td>
+                            <td>${escapeHtml(entry.remarks || '')}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
 function paymentModalBody(summary, entries = []) {
@@ -292,11 +326,36 @@ function paymentModalBody(summary, entries = []) {
                 <div class="field"><i data-lucide="calendar"></i><label>Month</label><input value="${escapeHtml(monthName(summary?.payment_month))}" disabled></div>
                 <div class="field"><i data-lucide="calendar-range"></i><label>Year</label><input value="${escapeHtml(summary?.payment_year || '')}" disabled></div>
                 <div class="field"><i data-lucide="scale"></i><label>Net Payable</label><input value="${money(summary?.net_payable)}" disabled></div>
+                <div class="field"><i data-lucide="wallet"></i><label>Paid Amount</label><input value="${money(summary?.paid_amount)}" disabled></div>
+                <div class="field"><i data-lucide="circle-alert"></i><label>Pending Amount</label><input value="${money(summary?.pending_amount)}" disabled></div>
             </div>
             <div class="payment-history-card">
-                <h3 class="erp-card-title" style="margin-top:0;">Summary Note</h3>
+                <h3 class="erp-card-title" style="margin-top:0;">Payment History</h3>
                 ${paymentHistoryHtml(entries)}
             </div>
+        </div>
+    `;
+}
+
+function paymentEntryBody(summary) {
+    return `
+        <div class="payment-modal-body">
+            <div class="payment-modal-grid">
+                <div class="field"><i data-lucide="users"></i><label>Team</label><input value="${escapeHtml(summary?.team_name || '')}" disabled></div>
+                <div class="field"><i data-lucide="scale"></i><label>Payment Amount</label><input id="payment_amount" type="number" min="0.01" step="0.01" value="${Number(summary?.pending_amount || 0).toFixed(2)}"></div>
+                <div class="field"><i data-lucide="calendar"></i><label>Payment Date</label><input id="payment_date" type="date"></div>
+                <div class="field"><i data-lucide="credit-card"></i><label>Payment Mode</label>
+                    <select id="payment_mode">
+                        <option value="Cash">Cash</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Cheque">Cheque</option>
+                        <option value="UPI">UPI</option>
+                    </select>
+                </div>
+                <div class="field"><i data-lucide="hash"></i><label>Reference No</label><input id="reference_no" type="text" placeholder="Optional"></div>
+                <div class="field"><i data-lucide="message-square"></i><label>Remarks</label><input id="remarks" type="text" placeholder="Optional"></div>
+            </div>
+            <div id="payment-errors" class="form-errors" hidden></div>
         </div>
     `;
 }
@@ -307,12 +366,50 @@ async function openViewModal(paymentId) {
     const entries = response.data.data.entries || [];
     window.ErpModal.open({
         title: 'View Team Payment',
-        subtitle: 'Read-only summary-only view.',
+        subtitle: 'Payment summary and settlement history.',
         size: 'lg',
         body: paymentModalBody(summary, entries),
         footer: '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button>',
     });
     lucide?.createIcons();
+}
+
+async function openPayModal(paymentId) {
+    const response = await axios.get(`${endpoint}/${paymentId}`);
+    const summary = response.data.data.summary;
+    if (Number(summary?.pending_amount || 0) <= 0) {
+        window.ErpToast?.show('This team payment is already settled.', 'info');
+        return;
+    }
+    window.ErpModal.open({
+        title: 'Record Team Payment',
+        subtitle: 'Apply a payment against the current pending amount.',
+        size: 'lg',
+        body: paymentEntryBody(summary),
+        footer: '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-action="submit-payment" data-payment-id="' + paymentId + '"><i data-lucide="save"></i> Save Payment</button>',
+    });
+    document.getElementById('payment_date').valueAsDate = new Date();
+    lucide?.createIcons();
+}
+
+async function submitPayment(paymentId) {
+    const errors = document.getElementById('payment-errors');
+    errors.hidden = true;
+    try {
+        await axios.post(`${endpoint}/${paymentId}/payments`, {
+            payment_amount: document.getElementById('payment_amount').value,
+            payment_date: document.getElementById('payment_date').value,
+            payment_mode: document.getElementById('payment_mode').value,
+            reference_no: document.getElementById('reference_no').value,
+            remarks: document.getElementById('remarks').value,
+        });
+        window.ErpModal.close();
+        await load(page);
+        window.ErpToast?.show('Team payment recorded.');
+    } catch (error) {
+        errors.textContent = error.normalizedMessage || 'Unable to record team payment.';
+        errors.hidden = false;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -340,13 +437,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     rowsEl.addEventListener('click', async (event) => {
         const viewId = event.target.closest('[data-view]')?.dataset.view;
+        const payId = event.target.closest('[data-pay]')?.dataset.pay;
         if (viewId) {
             await openViewModal(viewId).catch((error) => window.ErpToast?.show(error.normalizedMessage || 'Unable to open payment summary.', 'danger'));
             return;
         }
+        if (payId) {
+            await openPayModal(payId).catch((error) => window.ErpToast?.show(error.normalizedMessage || 'Unable to open payment entry.', 'danger'));
+        }
     });
     document.querySelector('[data-action="export"]').addEventListener('click', csvExport);
     document.querySelector('[data-action="print"]').addEventListener('click', () => window.print());
+    document.addEventListener('click', (event) => {
+        const submitPaymentButton = event.target.closest('[data-action="submit-payment"]');
+        if (submitPaymentButton) submitPayment(submitPaymentButton.dataset.paymentId);
+    });
     document.querySelectorAll('[data-sort]').forEach((button) => button.addEventListener('click', function () {
         if (sortBy === this.dataset.sort) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
         else { sortBy = this.dataset.sort; sortDirection = 'asc'; }
