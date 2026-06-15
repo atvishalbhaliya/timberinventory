@@ -154,6 +154,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/team-payments/export', [TeamPaymentController::class, 'export'])->middleware('permission:accounts.view');
         Route::get('/team-payments', [TeamPaymentController::class, 'index'])->middleware('permission:accounts.view');
         Route::post('/team-payments/refresh', [TeamPaymentController::class, 'refresh'])->middleware('permission:accounts.manage');
+        Route::get('/team-payments/{id}', [TeamPaymentController::class, 'show'])->whereNumber('id')->middleware('permission:accounts.view');
+        Route::post('/team-payments/{id}/payments', [TeamPaymentController::class, 'pay'])->whereNumber('id')->middleware('permission:accounts.manage');
 
         Route::get('/parties/next-code', [MasterDataController::class, 'nextPartyCode'])->middleware('permission:masters.view');
         Route::get('/items/import-template', [MasterDataController::class, 'itemImportTemplate'])->middleware('permission:masters.view');
