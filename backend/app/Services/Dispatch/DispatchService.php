@@ -180,7 +180,7 @@ class DispatchService
         $data['challan_no'] = $data['challan_no'] ?: $this->nextNumber($request);
         $data['total_qty'] = (float) $details->sum('qty');
 
-        return DB::transaction(function () use ($user, $data): int {
+        return DB::transaction(function () use ($user, $data, $request): int {
             $challanId = DB::table('challan_master')->insertGetId([
                 'tenant_id' => $user->tenant_id,
                 'branch_id' => $user->branch_id,
@@ -219,7 +219,7 @@ class DispatchService
                     'updated_at' => now(),
                 ]);
             }
-
+              $details = collect($data['team_details']);          
             $this->recordStockOutMovements($request, $header, $details);
 
             return $challanId;
@@ -248,7 +248,7 @@ class DispatchService
         $data['challan_no'] = $data['challan_no'] ?: $context->challan_no;
         $data['total_qty'] = (float) $details->sum('qty');
 
-        DB::transaction(function () use ($context, $data, $user): void {
+        DB::transaction(function () use ($context, $data, $user, $request): void {
             $existingDetails = DB::table('challan_team_detail')
                 ->where('challan_id', $context->challan_id)
                 ->orderBy('detail_id')
@@ -345,7 +345,7 @@ class DispatchService
 
     private function recordStockOutMovements(Request $request, object $header, Collection $details): void
     {
-        $movements = $details->map(function ($detail) use ($header): array {
+        $movements = $details->map(function ($detail) use ($header, $request): array {
             $locationId = (int) ($detail->location_id ?? $header->source_location_id ?? 0);
 
             if ($locationId <= 0) {
@@ -353,9 +353,9 @@ class DispatchService
             }
 
             return [
-                'item_id' => (int) $detail->item_id,
+              'item_id' => (int) $detail['item_id'],
                 'location_id' => $locationId,
-                'qty' => (float) $detail->qty,
+                'qty' => (float) $detail['qty'],
             ];
         });
 
