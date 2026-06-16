@@ -33,7 +33,7 @@ class TeamPaymentService
             ->select([
                 'team_ledger.team_id',
                 DB::raw('SUM(team_ledger.qty) as dispatch_qty'),
-                DB::raw('MAX(team_master.rate_per_pallet) as rate_per_pallet'),
+                DB::raw('SUM(CASE WHEN team_ledger.amount IS NOT NULL AND team_ledger.amount <> 0 THEN team_ledger.amount ELSE team_ledger.qty * team_master.rate_per_pallet END) as gross_amount'),
                 DB::raw('MAX(team_master.tds_percent) as tds_percent'),
             ])
             ->get();
@@ -44,9 +44,8 @@ class TeamPaymentService
         DB::transaction(function () use ($summaryRows, $user, $month, $year, &$count): void {
             foreach ($summaryRows as $row) {
                 $dispatchQty = (float) $row->dispatch_qty;
-                $rate = (float) $row->rate_per_pallet;
+                $gross = (float) $row->gross_amount;
                 $tdsPercent = (float) $row->tds_percent;
-                $gross = $dispatchQty * $rate;
                 $tds = $gross * $tdsPercent / 100;
                 $net = $gross - $tds;
 

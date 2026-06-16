@@ -152,6 +152,7 @@ class FullSystemDemoSeeder extends Seeder
             'transaction_type' => 'Production',
             'transaction_date' => now()->subDays(1)->toDateString(),
             'qty' => 18,
+            'amount' => 0,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -191,6 +192,9 @@ class FullSystemDemoSeeder extends Seeder
             'transaction_type' => 'Dispatch',
             'transaction_date' => now()->toDateString(),
             'qty' => 12,
+            'amount' => 300,
+            'reference_type' => 'Dispatch Challan',
+            'reference_id' => $challanId,
             'created_at' => $now,
             'updated_at' => $now,
         ]);

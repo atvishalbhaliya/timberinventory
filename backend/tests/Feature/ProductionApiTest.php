@@ -36,7 +36,9 @@ class ProductionApiTest extends TestCase
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Output', 'stock_type' => 'Fresh', 'qty_in' => 5]);
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Wastage', 'stock_type' => 'Fresh', 'qty_out' => 1]);
         $this->assertDatabaseHas('team_ledger', ['team_id' => $data['team_id'], 'transaction_type' => 'Production', 'qty' => 5]);
-        $this->assertDatabaseMissing('wastage_stock', ['item_id' => $data['raw_item_id'], 'generated_qty' => 1, 'status' => 'Posted']);
+        $this->assertDatabaseHas('production_wastage', ['production_id' => $productionId, 'item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'qty' => 1]);
+        $this->assertDatabaseHas('wastage_stock', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'source_module' => 'Production', 'source_reference' => 'PROD-001', 'generated_qty' => 1, 'available_qty' => 1, 'status' => 'Posted']);
+        $this->assertDatabaseHas('stock_summary', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'stock_type' => 'Fresh', 'stock_qty' => 1]);
 
         $this->postJson("/api/v1/production/{$productionId}/cancel", ['reason' => 'Wrong shift'])
             ->assertOk()
@@ -47,7 +49,8 @@ class ProductionApiTest extends TestCase
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Consumption Reversal', 'qty_in' => 5]);
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Output Reversal', 'qty_out' => 5]);
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Wastage Reversal', 'stock_type' => 'Fresh', 'qty_in' => 1]);
-        $this->assertDatabaseMissing('wastage_stock', ['item_id' => $data['raw_item_id'], 'generated_qty' => 1, 'status' => 'Cancelled']);
+        $this->assertDatabaseHas('wastage_stock', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'generated_qty' => 1, 'status' => 'Cancelled']);
+        $this->assertDatabaseHas('stock_summary', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'stock_type' => 'Fresh', 'stock_qty' => 0]);
         $this->assertDatabaseHas('team_ledger', ['team_id' => $data['team_id'], 'transaction_type' => 'Production', 'qty' => -5]);
     }
 
@@ -73,9 +76,12 @@ class ProductionApiTest extends TestCase
 
         $productionId = $this->postJson('/api/v1/production', $this->payload($data))->json('data.production_id');
 
-        $this->postJson("/api/v1/production/{$productionId}/post")
-            ->assertUnprocessable()
+        $response = $this->postJson("/api/v1/production/{$productionId}/post");
+        $response->assertUnprocessable()
             ->assertJsonValidationErrors('stock');
+        $this->assertStringContainsString('Wood Plank', (string) $response->json('errors.stock.0'));
+        $this->assertStringContainsString('Required:', (string) $response->json('errors.stock.0'));
+        $this->assertStringContainsString('Available:', (string) $response->json('errors.stock.0'));
     }
 
     public function test_production_post_permission_is_required(): void
@@ -106,19 +112,21 @@ class ProductionApiTest extends TestCase
         $fgItemId = DB::table('item_master')->insertGetId(['tenant_id' => $tenantId, 'item_code' => 'PALLET', 'item_name' => 'Finished Pallet', 'item_type' => 'Finish Product', 'uom_id' => $uomId, 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()]);
         $rmLocationId = DB::table('storage_location_master')->insertGetId(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'location_code' => 'RM', 'location_name' => 'Raw Store', 'location_type' => 'RM', 'created_at' => now(), 'updated_at' => now()]);
         $fgLocationId = DB::table('storage_location_master')->insertGetId(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'location_code' => 'FG', 'location_name' => 'Finished Store', 'location_type' => 'FG', 'created_at' => now(), 'updated_at' => now()]);
+        $wastageLocationId = DB::table('storage_location_master')->insertGetId(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'location_code' => 'WST', 'location_name' => 'Wastage Store', 'location_type' => 'WASTAGE', 'created_at' => now(), 'updated_at' => now()]);
         $teamId = DB::table('team_master')->insertGetId(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'team_code' => 'T1', 'team_name' => 'Team One', 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()]);
         $palletModelId = DB::table('pallet_model_master')->insertGetId(['tenant_id' => $tenantId, 'model_code' => 'PAL', 'model_name' => 'Pallet Model', 'created_at' => now(), 'updated_at' => now()]);
         $bomId = DB::table('bom_master')->insertGetId(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'bom_no' => 'BOM-001', 'bom_name' => 'Pallet BOM', 'pallet_model_id' => $palletModelId, 'version_no' => 'V1', 'is_active' => true, 'status' => 'Active', 'created_at' => now(), 'updated_at' => now()]);
         DB::table('bom_material')->insert(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'bom_id' => $bomId, 'item_id' => $rawItemId, 'uom_id' => $uomId, 'required_qty' => 1, 'wastage_percent' => 0, 'created_at' => now(), 'updated_at' => now()]);
         $stockId = DB::table('stock_summary')->insertGetId(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'item_id' => $rawItemId, 'location_id' => $rmLocationId, 'stock_qty' => 20, 'avg_rate' => 10, 'created_at' => now(), 'updated_at' => now()], 'stock_id');
 
-        return [$user, compact('branchId', 'uomId', 'rawItemId', 'fgItemId', 'rmLocationId', 'fgLocationId', 'teamId', 'palletModelId', 'bomId', 'stockId') + [
+        return [$user, compact('branchId', 'uomId', 'rawItemId', 'fgItemId', 'rmLocationId', 'fgLocationId', 'wastageLocationId', 'teamId', 'palletModelId', 'bomId', 'stockId') + [
             'branch_id' => $branchId,
             'uom_id' => $uomId,
             'raw_item_id' => $rawItemId,
             'fg_item_id' => $fgItemId,
             'rm_location_id' => $rmLocationId,
             'fg_location_id' => $fgLocationId,
+            'wastage_location_id' => $wastageLocationId,
             'team_id' => $teamId,
             'pallet_model_id' => $palletModelId,
             'bom_id' => $bomId,

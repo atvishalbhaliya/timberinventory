@@ -18,11 +18,44 @@ class TeamLedgerService
             'transaction_type' => 'Production',
             'transaction_date' => $movement['transaction_date'],
             'qty' => $movement['qty'],
+            'amount' => $movement['amount'] ?? 0,
+            'reference_type' => $movement['reference_type'] ?? null,
+            'reference_id' => $movement['reference_id'] ?? null,
             'created_by' => $movement['user_id'] ?? null,
             'updated_by' => $movement['user_id'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
         ], 'ledger_id');
+    }
+
+    public function recordDispatch(array $movement): int
+    {
+        $amount = $movement['amount'] ?? ((float) $movement['qty'] * (float) ($movement['rate_per_pallet'] ?? 0));
+
+        return DB::table('team_ledger')->insertGetId([
+            'tenant_id' => $movement['tenant_id'],
+            'branch_id' => $movement['branch_id'],
+            'team_id' => $movement['team_id'],
+            'pallet_model_id' => $movement['pallet_model_id'] ?? null,
+            'transaction_type' => 'Dispatch',
+            'transaction_date' => $movement['transaction_date'],
+            'qty' => $movement['qty'],
+            'amount' => $amount,
+            'reference_type' => $movement['reference_type'] ?? 'Dispatch Challan',
+            'reference_id' => $movement['reference_id'] ?? null,
+            'created_by' => $movement['user_id'] ?? null,
+            'updated_by' => $movement['user_id'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ], 'ledger_id');
+    }
+
+    public function deleteByReference(string $referenceType, int $referenceId): int
+    {
+        return DB::table('team_ledger')
+            ->where('reference_type', $referenceType)
+            ->where('reference_id', $referenceId)
+            ->delete();
     }
 
     public function paginate(Request $request)
@@ -31,7 +64,7 @@ class TeamLedgerService
 
         $query = DB::table('team_ledger')
             ->leftJoin('team_master', 'team_ledger.team_id', '=', 'team_master.team_id')
-            ->leftJoin('pallet_model_master', 'team_ledger.pallet_model_id', '=', 'pallet_model_master.pallet_model_id')
+            ->leftJoin('item_master', 'team_ledger.pallet_model_id', '=', 'item_master.item_id')
             ->leftJoin('users as creator', 'team_ledger.created_by', '=', 'creator.id')
             ->where('team_ledger.tenant_id', $user->tenant_id)
             ->when($user->branch_id, fn ($builder) => $builder->where('team_ledger.branch_id', $user->branch_id))
@@ -40,11 +73,14 @@ class TeamLedgerService
                 'team_ledger.transaction_date',
                 'team_ledger.transaction_type',
                 'team_ledger.qty',
+                'team_ledger.amount',
+                'team_ledger.reference_type',
+                'team_ledger.reference_id',
                 'team_master.team_code',
                 'team_master.team_name',
                 'team_master.rate_per_pallet',
                 'team_master.tds_percent',
-                'pallet_model_master.model_name as pallet_model_name',
+                'item_master.item_name as pallet_model_name',
                 'creator.full_name as created_by_name',
             ]);
 
@@ -54,7 +90,8 @@ class TeamLedgerService
                 $builder->orWhere('team_master.team_name', 'like', "%{$search}%")
                     ->orWhere('team_master.team_code', 'like', "%{$search}%")
                     ->orWhere('pallet_model_master.model_name', 'like', "%{$search}%")
-                    ->orWhere('team_ledger.transaction_type', 'like', "%{$search}%");
+                    ->orWhere('team_ledger.transaction_type', 'like', "%{$search}%")
+                    ->orWhere('team_ledger.reference_type', 'like', "%{$search}%");
             });
         }
 
@@ -81,6 +118,7 @@ class TeamLedgerService
             'pallet_model_name' => 'pallet_model_master.model_name',
             'transaction_type' => 'team_ledger.transaction_type',
             'qty' => 'team_ledger.qty',
+            'amount' => 'team_ledger.amount',
             'created_by_name' => 'creator.full_name',
         ];
 

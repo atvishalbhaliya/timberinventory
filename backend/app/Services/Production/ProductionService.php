@@ -7,6 +7,7 @@ use App\Services\Finance\TeamLedgerService;
 use App\Services\Inventory\InventoryTransactionService;
 use App\Services\Inventory\StockSummaryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -244,7 +245,13 @@ class ProductionService
             $this->ensureDraft($production);
             $this->ensurePostingStateIsClean($id);
             $this->ensureBomCanBePosted($request, (int) $production->bom_id);
-            $consumptions = DB::table('production_consumption')->where('production_id', $id)->lockForUpdate()->get();
+            $consumptions = DB::table('production_consumption')
+                ->leftJoin('item_master', 'production_consumption.item_id', '=', 'item_master.item_id')
+                ->leftJoin('storage_location_master', 'production_consumption.location_id', '=', 'storage_location_master.location_id')
+                ->where('production_consumption.production_id', $id)
+                ->select('production_consumption.*', 'item_master.item_name', 'storage_location_master.location_name')
+                ->lockForUpdate()
+                ->get();
             if ($consumptions->isEmpty()) {
                 throw ValidationException::withMessages(['consumptions' => 'At least one material consumption line is required.']);
             }
@@ -255,7 +262,12 @@ class ProductionService
                 $requiredQty = $consumedQty + $wastageQty;
                 $available = $this->summary->currentQty((int) $production->tenant_id, (int) $production->branch_id, (int) $line->item_id, (int) $line->location_id, 'Fresh');
                 if ($available < $requiredQty) {
-                    throw ValidationException::withMessages(['stock' => "Insufficient stock for item {$line->item_id}."]);
+                    $itemName = $line->item_name ?: ('Item '.$line->item_id);
+                    $locationName = $line->location_name ?: ('Location '.$line->location_id);
+
+                    throw ValidationException::withMessages([
+                        'stock' => "Insufficient stock for {$itemName} at {$locationName}. Required: ".number_format($requiredQty, 3).', Available: '.number_format($available, 3).'.',
+                    ]);
                 }
 
                 $this->transactions->record([
@@ -326,11 +338,15 @@ class ProductionService
                 'tenant_id' => $production->tenant_id,
                 'branch_id' => $production->branch_id,
                 'team_id' => $production->team_id,
+                'reference_type' => 'Production',
+                'reference_id' => $id,
                 'pallet_model_id' => $production->pallet_model_id,
                 'transaction_date' => $production->production_date,
                 'qty' => $production->produced_qty,
                 'user_id' => $request->user()?->id,
             ]);
+
+            $this->recordProductionWastage($request, $production, $consumptions);
 
             DB::table('production_master')->where('production_id', $id)->update([
                 'status' => self::STATUS_POSTED,
@@ -449,6 +465,8 @@ class ProductionService
                 'tenant_id' => $production->tenant_id,
                 'branch_id' => $production->branch_id,
                 'team_id' => $production->team_id,
+                 'reference_id' => $id,
+                    'reference_type' => 'Production',
                 'pallet_model_id' => $production->pallet_model_id,
                 'transaction_date' => now()->toDateString(),
                 'qty' => -1 * (float) $production->produced_qty,
@@ -585,6 +603,88 @@ class ProductionService
             ->where('production_wastage.production_id', $productionId)
             ->select('production_wastage.*', 'item_master.item_name', 'storage_location_master.location_name')
             ->get();
+    }
+
+    private function recordProductionWastage(Request $request, object $production, Collection $consumptions): void
+    {
+        $wastageLocationId = $this->resolveWastageLocationId($production);
+        if ($wastageLocationId <= 0) {
+            throw ValidationException::withMessages(['wastage_location_id' => 'A wastage location is required to post production wastage.']);
+        }
+
+        foreach ($consumptions as $line) {
+            $wastageQty = (float) ($line->wastage_qty ?? 0);
+            if ($wastageQty <= 0) {
+                continue;
+            }
+
+            $wastageId = DB::table('production_wastage')->insertGetId([
+                'tenant_id' => $production->tenant_id,
+                'branch_id' => $production->branch_id,
+                'production_id' => $production->production_id,
+                'item_id' => $line->item_id,
+                'location_id' => $wastageLocationId,
+                'qty' => $wastageQty,
+                'wastage_type' => 'Scrap',
+                'remarks' => $line->remarks ?? null,
+                'created_by' => $request->user()?->id,
+                'updated_by' => $request->user()?->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ], 'wastage_id');
+
+            $this->transactions->record([
+                'tenant_id' => $production->tenant_id,
+                'branch_id' => $production->branch_id,
+                'item_id' => $line->item_id,
+                'location_id' => $wastageLocationId,
+                'stock_type' => 'Fresh',
+                'transaction_date' => $production->production_date.' 00:00:00',
+                'transaction_type' => 'Production Wastage',
+                'reference_id' => $production->production_id,
+                'reference_type' => self::REFERENCE_TYPE,
+                'qty_in' => $wastageQty,
+                'qty_out' => 0,
+                'user_id' => $request->user()?->id,
+            ]);
+
+            DB::table('wastage_stock')->insert([
+                'tenant_id' => $production->tenant_id,
+                'branch_id' => $production->branch_id,
+                'item_id' => $line->item_id,
+                'location_id' => $wastageLocationId,
+                'wastage_type' => 'Scrap',
+                'source_module' => 'Production',
+                'source_id' => $wastageId,
+                'source_reference' => $production->production_no,
+                'transaction_date' => $production->production_date,
+                'generated_qty' => $wastageQty,
+                'available_qty' => $wastageQty,
+                'used_qty' => 0,
+                'balance_qty' => $wastageQty,
+                'status' => self::STATUS_POSTED,
+                'posted_at' => now(),
+                'posted_by' => $request->user()?->id,
+                'remarks' => $line->remarks ?? null,
+                'created_by' => $request->user()?->id,
+                'updated_by' => $request->user()?->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
+    private function resolveWastageLocationId(object $production): int
+    {
+        $locationId = (int) (DB::table('storage_location_master')
+            ->where('tenant_id', $production->tenant_id)
+            ->when($production->branch_id, fn ($query) => $query->where('branch_id', $production->branch_id))
+            ->whereIn('location_type', ['WASTAGE', 'SCRAP'])
+            ->orderByRaw("CASE WHEN location_type = 'WASTAGE' THEN 0 ELSE 1 END")
+            ->orderBy('location_id')
+            ->value('location_id') ?? 0);
+
+        return $locationId;
     }
 
     private function nextNumber(int $tenantId, int $branchId): string

@@ -4,6 +4,7 @@ namespace App\Services\Dispatch;
 
 use App\Services\Inventory\InventoryTransactionService;
 use App\Services\Inventory\StockSummaryService;
+use App\Services\Finance\TeamLedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ class DispatchService
     public function __construct(
         private readonly InventoryTransactionService $transactions,
         private readonly StockSummaryService $summary,
+        private readonly TeamLedgerService $teamLedger,
     ) {
     }
 
@@ -177,7 +179,7 @@ class DispatchService
 
         $user = $request->user();
         $details = collect($data['team_details']);
-        $data['challan_no'] = $data['challan_no'] ?: $this->nextNumber($request);
+        $data['challan_no'] = ! empty($data['challan_no'] ?? null) ? $data['challan_no'] : $this->nextNumber($request);
         $data['total_qty'] = (float) $details->sum('qty');
 
         return DB::transaction(function () use ($user, $data, $request): int {
@@ -219,8 +221,9 @@ class DispatchService
                     'updated_at' => now(),
                 ]);
             }
-              $details = collect($data['team_details']);          
+            $details = collect($data['team_details']);
             $this->recordStockOutMovements($request, $header, $details);
+            $this->recordTeamLedgerMovements($request, $header, $details);
 
             return $challanId;
         });
@@ -245,10 +248,10 @@ class DispatchService
         $context = $this->scopedMasterForUpdate($request, $id);
         $user = $request->user();
         $details = collect($data['team_details']);
-        $data['challan_no'] = $data['challan_no'] ?: $context->challan_no;
+        $data['challan_no'] = ! empty($data['challan_no'] ?? null) ? $data['challan_no'] : $context->challan_no;
         $data['total_qty'] = (float) $details->sum('qty');
 
-        DB::transaction(function () use ($context, $data, $user, $request): void {
+        DB::transaction(function () use ($context, $data, $user, $request, $details): void {
             $existingDetails = DB::table('challan_team_detail')
                 ->where('challan_id', $context->challan_id)
                 ->orderBy('detail_id')
@@ -271,6 +274,7 @@ class DispatchService
             ]);
 
             DB::table('challan_team_detail')->where('challan_id', $context->challan_id)->delete();
+            $this->teamLedger->deleteByReference(self::REFERENCE_TYPE, $context->challan_id);
 
             $header = (object) [
                 'challan_id' => $context->challan_id,
@@ -295,6 +299,7 @@ class DispatchService
             }
 
             $this->recordStockOutMovements($request, $header, $details);
+            $this->recordTeamLedgerMovements($request, $header, $details);
         });
 
         return $context->challan_id;
@@ -311,6 +316,7 @@ class DispatchService
                 ->get();
 
             $this->reverseStockMovements($context, $details, $request);
+            $this->teamLedger->deleteByReference(self::REFERENCE_TYPE, $context->challan_id);
 
             DB::table('challan_team_detail')->where('challan_id', $context->challan_id)->delete();
             DB::table('challan_master')->where('challan_id', $context->challan_id)->delete();
@@ -373,6 +379,34 @@ class DispatchService
                 'reference_type' => self::REFERENCE_TYPE,
                 'qty_in' => 0,
                 'qty_out' => $movement['qty'],
+                'user_id' => $request->user()?->id,
+            ]);
+        }
+    }
+
+    private function recordTeamLedgerMovements(Request $request, object $header, Collection $details): void
+    {
+        $teamRates = DB::table('team_master')
+            ->whereIn('team_id', $details->pluck('team_id')->filter()->unique())
+            ->pluck('rate_per_pallet', 'team_id');
+       
+        foreach ($details as $detail) {
+        //      echo $detail['team_id'];
+        
+        // exit;
+            $teamId = (int) $detail['team_id'];
+            $qty = (float) $detail['qty'];
+
+            $this->teamLedger->recordDispatch([
+                'tenant_id' => $header->tenant_id,
+                'branch_id' => $header->branch_id,
+                'team_id' => $teamId,
+                'pallet_model_id' => $detail['item_id'] ?? null,
+                'transaction_date' => $header->challan_date,
+                'qty' => $qty,
+                'rate_per_pallet' => (float) $teamRates->get($teamId, 0),
+                'reference_type' => self::REFERENCE_TYPE,
+                'reference_id' => $header->challan_id,
                 'user_id' => $request->user()?->id,
             ]);
         }

@@ -29,7 +29,7 @@ class TeamLedgerController extends Controller
 
         return response()->streamDownload(function () use ($rows): void {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Date', 'Team', 'Pallet Model', 'Type', 'Qty', 'Created By']);
+            fputcsv($handle, ['Date', 'Team', 'Pallet Model', 'Type', 'Qty', 'Amount', 'Created By']);
             foreach ($rows as $row) {
                 fputcsv($handle, [
                     $row->transaction_date,
@@ -37,6 +37,7 @@ class TeamLedgerController extends Controller
                     $row->pallet_model_name,
                     $row->transaction_type,
                     $row->qty,
+                    $row->amount,
                     $row->created_by_name,
                 ]);
             }

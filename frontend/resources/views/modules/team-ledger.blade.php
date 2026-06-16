@@ -53,12 +53,13 @@
                         <th><button class="sort-head" data-sort="pallet_model_name" type="button">Pallet Model <i data-lucide="chevrons-up-down"></i></button></th>
                         <th><button class="sort-head" data-sort="transaction_type" type="button">Type <i data-lucide="chevrons-up-down"></i></button></th>
                         <th class="text-end"><button class="sort-head sort-end" data-sort="qty" type="button">Qty <i data-lucide="chevrons-up-down"></i></button></th>
+                        <!-- <th class="text-end"><button class="sort-head sort-end" data-sort="amount" type="button">Amount <i data-lucide="chevrons-up-down"></i></button></th> -->
                         <th><button class="sort-head" data-sort="created_by_name" type="button">Created By <i data-lucide="chevrons-up-down"></i></button></th>
                     </tr>
                 </thead>
                 <tbody id="rows">
-                    <tr class="skeleton-row"><td colspan="6"></td></tr>
-                    <tr class="skeleton-row"><td colspan="6"></td></tr>
+                    <tr class="skeleton-row"><td colspan="7"></td></tr>
+                    <tr class="skeleton-row"><td colspan="7"></td></tr>
                 </tbody>
             </table>
         </div>
@@ -98,7 +99,7 @@
     .ledger-table-toolbar .module-search > svg { color:#cbd5e1; stroke:#cbd5e1; }
     .ledger-table-toolbar .module-search input { padding-right:38px; }
     .ledger-data-table-wrap { max-height:calc(100vh - 360px); min-height:320px; margin:0 20px 16px; overflow:auto; }
-    .ledger-data-table { min-width:1100px; table-layout:auto; border-collapse:separate; border-spacing:0; }
+    .ledger-data-table { min-width:1220px; table-layout:auto; border-collapse:separate; border-spacing:0; }
     .ledger-data-table th, .ledger-data-table td { border-right:1px solid color-mix(in srgb, var(--border) 54%, transparent); border-bottom:1px solid color-mix(in srgb, var(--border) 54%, transparent); }
     .ledger-data-table th:last-child, .ledger-data-table td:last-child { border-right:0; }
     .ledger-data-table th { top:0; z-index:4; height:44px; padding:0 12px; vertical-align:middle; white-space:nowrap; letter-spacing:0; }
@@ -186,9 +187,10 @@ function renderRows() {
             <td class="text-end">${qty(row.qty)}</td>
             <td>${escapeHtml(row.created_by_name || '')}</td>
         </tr>
-    `).join('') : '<tr><td colspan="6" class="text-muted">No ledger entries found.</td></tr>';
+    `).join('') : '<tr><td colspan="7" class="text-muted">No ledger entries found.</td></tr>';
     lucide?.createIcons();
 }
+//             <td class="text-end">${Number(row.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
 
 function renderPager() {
     const pages = [];
@@ -235,13 +237,14 @@ function resetFilters() {
 }
 
 function csvExport() {
-    const headers = ['Date', 'Team', 'Pallet Model', 'Type', 'Qty', 'Created By'];
+    const headers = ['Date', 'Team', 'Pallet Model', 'Type', 'Qty', 'Amount', 'Created By'];
     const csv = [headers.join(','), ...rowsData.map((row) => [
         row.transaction_date,
         row.team_name,
         row.pallet_model_name,
         row.transaction_type,
         row.qty,
+        // row.amount,
         row.created_by_name,
     ].map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
