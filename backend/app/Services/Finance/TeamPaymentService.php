@@ -22,18 +22,20 @@ class TeamPaymentService
             ->where('payment_year', $year)
             ->delete();
 
-        $summaryRows = DB::table('team_ledger')
-            ->leftJoin('team_master', 'team_ledger.team_id', '=', 'team_master.team_id')
-            ->where('team_ledger.tenant_id', $user->tenant_id)
-            ->when($user->branch_id, fn ($builder) => $builder->where('team_ledger.branch_id', $user->branch_id))
-            ->where('team_ledger.transaction_type', 'Dispatch')
-            ->whereMonth('team_ledger.transaction_date', $month)
-            ->whereYear('team_ledger.transaction_date', $year)
-            ->groupBy('team_ledger.team_id', 'team_master.rate_per_pallet', 'team_master.tds_percent')
+        $summaryRows = DB::table('stock_ledger')
+            ->leftJoin('team_master', 'stock_ledger.team_id', '=', 'team_master.team_id')
+            ->where('stock_ledger.tenant_id', $user->tenant_id)
+            ->when($user->branch_id, fn ($builder) => $builder->where('stock_ledger.branch_id', $user->branch_id))
+            ->where('stock_ledger.transaction_type', 'Dispatch')
+            ->where('stock_ledger.reference_type', 'Dispatch Challan')
+            ->whereMonth('stock_ledger.transaction_date', $month)
+            ->whereYear('stock_ledger.transaction_date', $year)
+            ->whereNotNull('stock_ledger.team_id')
+            ->groupBy('stock_ledger.team_id', 'team_master.tds_percent')
             ->select([
-                'team_ledger.team_id',
-                DB::raw('SUM(team_ledger.qty) as dispatch_qty'),
-                DB::raw('SUM(CASE WHEN team_ledger.amount IS NOT NULL AND team_ledger.amount <> 0 THEN team_ledger.amount ELSE team_ledger.qty * team_master.rate_per_pallet END) as gross_amount'),
+                'stock_ledger.team_id',
+                DB::raw('SUM(stock_ledger.qty_out) as dispatch_qty'),
+                DB::raw('SUM(COALESCE(stock_ledger.labour_charge, 0)) as gross_amount'),
                 DB::raw('MAX(team_master.tds_percent) as tds_percent'),
             ])
             ->get();

@@ -34,6 +34,7 @@ class ProductionApiTest extends TestCase
         $this->assertDatabaseHas('stock_summary', ['item_id' => $data['fg_item_id'], 'location_id' => $data['fg_location_id'], 'stock_qty' => 5]);
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Consumption', 'stock_type' => 'Fresh', 'qty_out' => 5]);
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Output', 'stock_type' => 'Fresh', 'qty_in' => 5]);
+        $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Output', 'labour_charge' => 75]);
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Wastage', 'stock_type' => 'Fresh', 'qty_out' => 1]);
         $this->assertDatabaseHas('team_ledger', ['team_id' => $data['team_id'], 'transaction_type' => 'Production', 'qty' => 5]);
         $this->assertDatabaseHas('production_wastage', ['production_id' => $productionId, 'item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'qty' => 1]);
@@ -147,6 +148,7 @@ class ProductionApiTest extends TestCase
             'fg_location_id' => $data['fg_location_id'],
             'produced_qty' => 5,
             'production_cost' => 250,
+            'labour_charge' => 75,
             'consumptions' => [[
                 'item_id' => $data['raw_item_id'],
                 'uom_id' => $data['uom_id'],

@@ -28,6 +28,7 @@ class StoreProductionRequest extends FormRequest
             'fg_location_id' => ['required', 'integer', Rule::exists('storage_location_master', 'location_id')->where('tenant_id', $user->tenant_id)->where('branch_id', $branchId)->where('status', 'Active')],
             'produced_qty' => ['required', 'numeric', 'gt:0'],
             'production_cost' => ['nullable', 'numeric', 'gte:0'],
+            'labour_charge' => ['nullable', 'numeric', 'gte:0'],
             'remarks' => ['nullable', 'string', 'max:2000'],
             'consumptions' => ['required', 'array', 'min:1'],
             'consumptions.*.item_id' => ['required', 'integer', Rule::exists('item_master', 'item_id')->where('tenant_id', $user->tenant_id)->where('status', 'Active')],

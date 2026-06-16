@@ -50,7 +50,7 @@
                     <tr>
                         <th><button class="sort-head" data-sort="transaction_date" type="button">Date <i data-lucide="chevrons-up-down"></i></button></th>
                         <th><button class="sort-head" data-sort="team_name" type="button">Team <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th><button class="sort-head" data-sort="pallet_model_name" type="button">Pallet Model <i data-lucide="chevrons-up-down"></i></button></th>
+                        <th><button class="sort-head" data-sort="pallet_model_name" type="button">Finished Item <i data-lucide="chevrons-up-down"></i></button></th>
                         <th><button class="sort-head" data-sort="transaction_type" type="button">Type <i data-lucide="chevrons-up-down"></i></button></th>
                         <th class="text-end"><button class="sort-head sort-end" data-sort="qty" type="button">Qty <i data-lucide="chevrons-up-down"></i></button></th>
                         <!-- <th class="text-end"><button class="sort-head sort-end" data-sort="amount" type="button">Amount <i data-lucide="chevrons-up-down"></i></button></th> -->

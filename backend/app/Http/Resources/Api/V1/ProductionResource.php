@@ -26,6 +26,7 @@ class ProductionResource extends JsonResource
             'fg_location_id' => $this->fg_location_id,
             'produced_qty' => (float) $this->produced_qty,
             'production_cost' => (float) $this->production_cost,
+            'labour_charge' => (float) ($this->labour_charge ?? 0),
             'status' => $this->status,
             'remarks' => $this->remarks,
             'created_by' => $this->created_by ?? null,

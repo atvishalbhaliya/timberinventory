@@ -315,8 +315,10 @@ class ProductionService
                 'reference_type' => self::REFERENCE_TYPE,
                 'qty_in' => $production->produced_qty,
                 'qty_out' => 0,
+                'production_rate' =>  $production->produced_qty > 0 ? ((float) $production->production_cost / (float) $production->produced_qty) : 0,
                 'rate' => $production->produced_qty > 0 ? ((float) $production->production_cost / (float) $production->produced_qty) : 0,
                 'amount' => $production->production_cost,
+                'labour_charge' => $production->labour_charge,
                 'user_id' => $request->user()?->id,
             ]);
 
@@ -339,8 +341,9 @@ class ProductionService
                 'branch_id' => $production->branch_id,
                 'team_id' => $production->team_id,
                 'reference_type' => 'Production',
+                'production_rate' => $production->production_cost,
                 'reference_id' => $id,
-                'pallet_model_id' => $production->produced_item_id,
+                'pallet_model_id' => $production->pallet_model_id,
                 'transaction_date' => $production->production_date,
                 'qty' => $production->produced_qty,
                 'user_id' => $request->user()?->id,
@@ -467,7 +470,7 @@ class ProductionService
                 'team_id' => $production->team_id,
                  'reference_id' => $id,
                     'reference_type' => 'Production',
-                'pallet_model_id' => $production->produced_item_id,
+                'pallet_model_id' => $production->pallet_model_id,
                 'transaction_date' => now()->toDateString(),
                 'qty' => -1 * (float) $production->produced_qty,
                 'user_id' => $request->user()?->id,
@@ -528,6 +531,7 @@ class ProductionService
             'fg_location_id' => (int) $data['fg_location_id'],
             'produced_qty' => (float) $data['produced_qty'],
             'production_cost' => (float) ($data['production_cost'] ?? 0),
+            'labour_charge' => (float) ($data['labour_charge'] ?? 0),
             'status' => self::STATUS_DRAFT,
             'remarks' => $data['remarks'] ?? null,
             'updated_by' => $user->id,
@@ -576,6 +580,7 @@ class ProductionService
             DB::table('production_wastage')->insert($line);
         }
     }
+    
 
     private function consumptions(int $productionId)
     {
