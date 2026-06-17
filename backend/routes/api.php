@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\SetupStatusController;
 use App\Http\Controllers\Api\V1\StockLedgerController;
 use App\Http\Controllers\Api\V1\StockSummaryController;
 use App\Http\Controllers\Api\V1\OverallStockSummaryController;
+use App\Http\Controllers\Api\V1\WastageSummaryController;
 use App\Http\Controllers\Api\V1\StockVerificationController;
 use App\Http\Controllers\Api\V1\WastageController;
 use App\Http\Controllers\Api\V1\TeamLedgerController;
@@ -90,6 +91,9 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/overall-stock-summary/import', [OverallStockSummaryController::class, 'import'])->middleware('permission:stock-summary.view');
         Route::get('/overall-stock-summary/history', [OverallStockSummaryController::class, 'history'])->middleware('permission:stock-summary.view');
         Route::get('/overall-stock-summary', [OverallStockSummaryController::class, 'index'])->middleware('permission:stock-summary.view');
+        Route::get('/wastage-summary/export', [WastageSummaryController::class, 'export'])->middleware('permission:wastage.view');
+        Route::get('/wastage-summary/history', [WastageSummaryController::class, 'history'])->middleware('permission:wastage.view');
+        Route::get('/wastage-summary', [WastageSummaryController::class, 'index'])->middleware('permission:wastage.view');
 
         Route::get('/stock-verifications/current-stock', [StockVerificationController::class, 'currentStock'])->middleware('permission:stock-verification.view');
         Route::get('/stock-verifications', [StockVerificationController::class, 'index'])->middleware('permission:stock-verification.view');

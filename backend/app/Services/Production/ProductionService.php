@@ -281,26 +281,9 @@ class ProductionService
                     'reference_id' => $id,
                     'reference_type' => self::REFERENCE_TYPE,
                     'qty_in' => 0,
-                    'qty_out' => $consumedQty,
+                    'qty_out' => $requiredQty,
                     'user_id' => $request->user()?->id,
                 ]);
-
-                if ($wastageQty > 0) {
-                    $this->transactions->record([
-                        'tenant_id' => $production->tenant_id,
-                        'branch_id' => $production->branch_id,
-                        'item_id' => $line->item_id,
-                        'location_id' => $line->location_id,
-                        'stock_type' => 'Fresh',
-                        'transaction_date' => $production->production_date.' 00:00:00',
-                        'transaction_type' => 'Production Wastage',
-                        'reference_id' => $id,
-                        'reference_type' => self::REFERENCE_TYPE,
-                        'qty_in' => 0,
-                        'qty_out' => $wastageQty,
-                        'user_id' => $request->user()?->id,
-                    ]);
-                }
             }
 
             $this->transactions->record([
@@ -344,8 +327,7 @@ class ProductionService
                 'reference_type' => 'Production',
                 'production_rate' => $production->production_cost,
                 'reference_id' => $id,
-                 //don't   change to pallet_model_id
-                'pallet_model_id' =>$production->produced_item_id,
+                'pallet_model_id' => $production->pallet_model_id,
                 'transaction_date' => $production->production_date,
                 'qty' => $production->produced_qty,
                 'user_id' => $request->user()?->id,
@@ -386,6 +368,7 @@ class ProductionService
             }
 
             foreach (DB::table('production_consumption')->where('production_id', $id)->lockForUpdate()->get() as $line) {
+                $wastageQty = (float) ($line->wastage_qty ?? 0);
                 $this->transactions->record([
                     'tenant_id' => $production->tenant_id,
                     'branch_id' => $production->branch_id,
@@ -396,28 +379,10 @@ class ProductionService
                     'transaction_type' => 'Production Consumption Reversal',
                     'reference_id' => $id,
                     'reference_type' => self::REFERENCE_TYPE,
-                    'qty_in' => $line->consumed_qty,
+                    'qty_in' => ((float) $line->consumed_qty) + $wastageQty,
                     'qty_out' => 0,
                     'user_id' => $request->user()?->id,
                 ]);
-
-                $wastageQty = (float) ($line->wastage_qty ?? 0);
-                if ($wastageQty > 0) {
-                    $this->transactions->record([
-                        'tenant_id' => $production->tenant_id,
-                        'branch_id' => $production->branch_id,
-                        'item_id' => $line->item_id,
-                        'location_id' => $line->location_id,
-                        'stock_type' => 'Fresh',
-                        'transaction_date' => now(),
-                        'transaction_type' => 'Production Wastage Reversal',
-                        'reference_id' => $id,
-                        'reference_type' => self::REFERENCE_TYPE,
-                        'qty_in' => $wastageQty,
-                        'qty_out' => 0,
-                        'user_id' => $request->user()?->id,
-                    ]);
-                }
             }
 
             $this->transactions->record([
@@ -441,7 +406,7 @@ class ProductionService
                     'branch_id' => $production->branch_id,
                     'item_id' => $wastage->item_id,
                     'location_id' => $wastage->location_id ?: $production->fg_location_id,
-                    'stock_type' => 'Fresh',
+                    'stock_type' => 'Wastage',
                     'transaction_date' => now(),
                     'transaction_type' => 'Production Wastage Reversal',
                     'reference_id' => $id,
@@ -472,8 +437,7 @@ class ProductionService
                 'team_id' => $production->team_id,
                  'reference_id' => $id,
                     'reference_type' => 'Production',
-                    //don't   change to pallet_model_id
-                'pallet_model_id' =>$production->produced_item_id,
+                'pallet_model_id' => $production->pallet_model_id,
                 'transaction_date' => now()->toDateString(),
                 'qty' => -1 * (float) $production->produced_qty,
                 'user_id' => $request->user()?->id,
@@ -646,7 +610,7 @@ class ProductionService
                 'branch_id' => $production->branch_id,
                 'item_id' => $line->item_id,
                 'location_id' => $wastageLocationId,
-                'stock_type' => 'Fresh',
+                'stock_type' => 'Wastage',
                 'transaction_date' => $production->production_date.' 00:00:00',
                 'transaction_type' => 'Production Wastage',
                 'reference_id' => $production->production_id,
@@ -684,14 +648,24 @@ class ProductionService
 
     private function resolveWastageLocationId(object $production): int
     {
-        $locationId = (int) (DB::table('storage_location_master')
-            ->where('tenant_id', $production->tenant_id)
-            ->when($production->branch_id, fn ($query) => $query->where('branch_id', $production->branch_id))
-            ->whereIn('location_type', ['WASTAGE', 'SCRAP'])
-            ->orderByRaw("CASE WHEN location_type = 'WASTAGE' THEN 0 ELSE 1 END")
-            ->orderBy('location_id')
-            ->value('location_id') ?? 0);
-
+       $locationId = (int) (
+    DB::table('storage_location_master')
+        ->where('tenant_id', $production->tenant_id)
+        ->when($production->branch_id, fn ($query) => $query->where('branch_id', $production->branch_id))
+        ->whereIn('location_type', ['RM', 'WASTAGE', 'SCRAP'])
+        ->whereNull('deleted_at')
+        ->orderByRaw("
+            CASE
+                WHEN location_type = 'RM' THEN 0
+                WHEN location_type = 'WASTAGE' THEN 1
+                WHEN location_type = 'SCRAP' THEN 2
+                ELSE 3
+            END
+        ")
+        ->orderBy('location_id')
+        ->value('location_id')
+) ?? 0;
+        
         return $locationId;
     }
 

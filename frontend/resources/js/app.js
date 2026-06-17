@@ -97,6 +97,8 @@ const routePermissions = {
     '/stock-summary': 'stock-summary.view',
     '/stock-verification': 'stock-verification.view',
     '/wastage': 'wastage.view',
+    '/wastage-adjustment': 'wastage.manage',
+    '/wastage-summary': 'wastage.view',
     '/wastage-reuse': 'wastage-reuse.view',
     '/dispatch-challan': 'dispatch.view',
     '/team-ledger': 'accounts.view',

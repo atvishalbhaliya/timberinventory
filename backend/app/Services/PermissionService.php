@@ -19,13 +19,20 @@ class PermissionService
         if (! $user->role_id) {
             return collect();
         }
-
+//  dd(DB::table('role_permissions')
+//             ->join('permissions', 'role_permissions.permission_id', '=', 'permissions.id')
+//             ->where('role_permissions.role_id', $user->role_id)
+//             ->whereNull('permissions.deleted_at')
+//             ->orderBy('permissions.name')
+//             ->pluck('permissions.name'));
         return DB::table('role_permissions')
             ->join('permissions', 'role_permissions.permission_id', '=', 'permissions.id')
             ->where('role_permissions.role_id', $user->role_id)
             ->whereNull('permissions.deleted_at')
             ->orderBy('permissions.name')
             ->pluck('permissions.name');
+
+           
     }
 
     public function userCan(User $user, string $permission): bool
@@ -49,11 +56,14 @@ class PermissionService
             ->where('id', $user->role_id)
             ->where('tenant_id', $user->tenant_id)
             ->value('name');
-            
+           
         $isSuperAdmin = $roleName === 'Super Admin';
 
         return collect(PermissionCatalog::navigation())
-            ->filter(fn (array $item): bool => $isSuperAdmin || $permissionNames->contains($item['permission']))
+            ->filter(
+                
+                fn (array $item )
+                : bool => $isSuperAdmin || $permissionNames->contains($item['permission']))
             ->map(fn (array $item): array => [
                 'title' => $item['title'],
                 'path' => $item['path'],
@@ -62,7 +72,9 @@ class PermissionService
                 'icon' => $item['icon'] ?? 'circle',
             ])
             ->values()
-            ->all();
+            ->all()
+            ;
+           
     }
 
     public function ensureCatalog(): void

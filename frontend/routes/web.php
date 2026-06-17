@@ -22,6 +22,7 @@ $operations = [
     'stock-ledger' => 'Stock Ledger',
     'stock-summary' => 'Stock Summary',
     'overall-stock-summary' => 'OverAll Stock Summary',
+    'wastage-summary' => 'Wastage Summary',
     'stock-verification' => 'Stock Verification',
     'bom' => 'BOM',
     'production' => 'Production Entry',
@@ -47,10 +48,12 @@ Route::view('/grn', 'modules.grn')->name('operations.grn');
 Route::view('/stock-ledger', 'modules.stock-ledger')->name('operations.stock-ledger');
 Route::view('/stock-summary', 'modules.stock-summary')->name('operations.stock-summary');
 Route::view('/overall-stock-summary', 'modules.overall-stock-summary')->name('operations.overall-stock-summary');
+Route::view('/wastage-summary', 'modules.wastage')->name('operations.wastage-summary');
 Route::view('/stock-verification', 'modules.stock-verification')->name('operations.stock-verification');
 Route::view('/bom', 'modules.bom')->name('operations.bom');
 Route::view('/production', 'modules.production')->name('operations.production');
 Route::view('/wastage', 'modules.wastage')->name('operations.wastage');
+Route::view('/wastage-adjustment', 'modules.wastage-adjustment')->name('operations.wastage-adjustment');
 Route::view('/wastage-reuse', 'modules.wastage-reuse')->name('operations.wastage-reuse');
 Route::view('/dispatch-challan', 'modules.dispatch-challan')->name('operations.dispatch-challan');
 Route::view('/team-ledger', 'modules.team-ledger')->name('operations.team-ledger');
@@ -106,7 +109,7 @@ foreach ($masterModules as $slug => $title) {
 }
 
 foreach ($operations as $slug => $title) {
-    if (in_array($slug, ['grn', 'stock-ledger','overall-stock-summary', 'stock-summary', 'stock-verification', 'bom', 'production', 'wastage', 'wastage-reuse', 'dispatch-challan', 'team-ledger', 'team-payments', 'inventory-reports', 'production-reports', 'dispatch-reports', 'payment-reports'], true)) {
+    if (in_array($slug, ['grn', 'stock-ledger','overall-stock-summary', 'stock-summary', 'wastage-summary', 'stock-verification', 'bom', 'production', 'wastage', 'wastage-reuse', 'dispatch-challan', 'team-ledger', 'team-payments', 'inventory-reports', 'production-reports', 'dispatch-reports', 'payment-reports'], true)) {
         continue;
     }
 

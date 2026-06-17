@@ -32,14 +32,14 @@ class ProductionApiTest extends TestCase
 
         $this->assertDatabaseHas('stock_summary', ['item_id' => $data['raw_item_id'], 'location_id' => $data['rm_location_id'], 'stock_type' => 'Fresh', 'stock_qty' => 14]);
         $this->assertDatabaseHas('stock_summary', ['item_id' => $data['fg_item_id'], 'location_id' => $data['fg_location_id'], 'stock_qty' => 5]);
-        $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Consumption', 'stock_type' => 'Fresh', 'qty_out' => 5]);
+        $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Consumption', 'stock_type' => 'Fresh', 'qty_out' => 6]);
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Output', 'stock_type' => 'Fresh', 'qty_in' => 5]);
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Output', 'labour_charge' => 75]);
-        $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Wastage', 'stock_type' => 'Fresh', 'qty_out' => 1]);
+        $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Wastage', 'stock_type' => 'Wastage', 'qty_in' => 1]);
         $this->assertDatabaseHas('team_ledger', ['team_id' => $data['team_id'], 'transaction_type' => 'Production', 'qty' => 5]);
         $this->assertDatabaseHas('production_wastage', ['production_id' => $productionId, 'item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'qty' => 1]);
         $this->assertDatabaseHas('wastage_stock', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'source_module' => 'Production', 'source_reference' => 'PROD-001', 'generated_qty' => 1, 'available_qty' => 1, 'status' => 'Posted']);
-        $this->assertDatabaseHas('stock_summary', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'stock_type' => 'Fresh', 'stock_qty' => 1]);
+        $this->assertDatabaseHas('stock_summary', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'stock_type' => 'Wastage', 'stock_qty' => 1]);
 
         $this->postJson("/api/v1/production/{$productionId}/cancel", ['reason' => 'Wrong shift'])
             ->assertOk()
@@ -47,11 +47,11 @@ class ProductionApiTest extends TestCase
 
         $this->assertDatabaseHas('stock_summary', ['item_id' => $data['raw_item_id'], 'location_id' => $data['rm_location_id'], 'stock_type' => 'Fresh', 'stock_qty' => 20]);
         $this->assertDatabaseHas('stock_summary', ['item_id' => $data['fg_item_id'], 'location_id' => $data['fg_location_id'], 'stock_qty' => 0]);
-        $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Consumption Reversal', 'qty_in' => 5]);
+        $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Consumption Reversal', 'qty_in' => 6]);
         $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Output Reversal', 'qty_out' => 5]);
-        $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Wastage Reversal', 'stock_type' => 'Fresh', 'qty_in' => 1]);
+        $this->assertDatabaseHas('stock_ledger', ['reference_type' => 'Production', 'reference_id' => $productionId, 'transaction_type' => 'Production Wastage Reversal', 'stock_type' => 'Wastage', 'qty_out' => 1]);
         $this->assertDatabaseHas('wastage_stock', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'generated_qty' => 1, 'status' => 'Cancelled']);
-        $this->assertDatabaseHas('stock_summary', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'stock_type' => 'Fresh', 'stock_qty' => 0]);
+        $this->assertDatabaseHas('stock_summary', ['item_id' => $data['raw_item_id'], 'location_id' => $data['wastage_location_id'], 'stock_type' => 'Wastage', 'stock_qty' => 0]);
         $this->assertDatabaseHas('team_ledger', ['team_id' => $data['team_id'], 'transaction_type' => 'Production', 'qty' => -5]);
     }
 
