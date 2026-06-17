@@ -142,6 +142,7 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('/dispatch/challans/export', [DispatchController::class, 'export'])->middleware('permission:dispatch.view');
         Route::get('/dispatch/challans/next-number', [DispatchController::class, 'nextNumber'])->middleware('permission:dispatch.view');
+        Route::get('/dispatch/challans/line-metrics', [DispatchController::class, 'lineMetrics'])->middleware('permission:dispatch.view');
         Route::get('/dispatch/challans', [DispatchController::class, 'index'])->middleware('permission:dispatch.view');
         Route::post('/dispatch/challans', [DispatchController::class, 'store'])->middleware('permission:dispatch.manage');
         Route::get('/dispatch/challans/{id}', [DispatchController::class, 'show'])->whereNumber('id')->middleware('permission:dispatch.view');

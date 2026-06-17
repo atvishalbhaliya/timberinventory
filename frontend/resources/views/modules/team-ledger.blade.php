@@ -39,7 +39,7 @@
             </div>
             <div class="module-search">
                 <i data-lucide="search"></i>
-                <input id="search" type="search" placeholder="Search team or pallet model">
+                <input id="search" type="search" placeholder="Search team or Finished Item">
                 <button class="search-clear" data-action="clear-search" type="button" title="Clear search"><i data-lucide="x"></i></button>
             </div>
         </div>

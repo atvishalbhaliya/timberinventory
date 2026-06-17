@@ -97,6 +97,26 @@ class DispatchApiTest extends TestCase
         $this->assertDatabaseCount('team_ledger', 0);
     }
 
+    public function test_dispatch_challan_uses_passed_labour_rate_when_provided(): void
+    {
+        [$user, $data] = $this->fixture(['dispatch.view', 'dispatch.manage']);
+        Sanctum::actingAs($user);
+
+        $payload = $this->payload($data, 4, 40);
+        $challanId = $this->postJson('/api/v1/dispatch/challans', $payload)
+            ->assertCreated()
+            ->json('data.challan_id');
+
+        $this->assertDatabaseHas('team_ledger', [
+            'team_id' => $data['team_id'],
+            'transaction_type' => 'Dispatch',
+            'reference_type' => 'Dispatch Challan',
+            'reference_id' => $challanId,
+            'qty' => 4,
+            'amount' => 160,
+        ]);
+    }
+
     private function fixture(array $permissionNames): array
     {
         $tenantId = DB::table('tenant_master')->insertGetId([
@@ -213,8 +233,18 @@ class DispatchApiTest extends TestCase
         ]];
     }
 
-    private function payload(array $data, float $qty): array
+    private function payload(array $data, float $qty, ?float $labourRate = null): array
     {
+        $line = [
+            'item_id' => $data['item_id'],
+            'team_id' => $data['team_id'],
+            'qty' => $qty,
+        ];
+
+        if ($labourRate !== null) {
+            $line['labour_rate'] = $labourRate;
+        }
+
         return [
             'challan_date' => now()->toDateString(),
             'customer_id' => $data['customer_id'],
@@ -222,13 +252,7 @@ class DispatchApiTest extends TestCase
             'vehicle_no' => 'MH12AB1234',
             'driver_name' => 'Driver One',
             'destination' => 'Customer Site',
-            'team_details' => [
-                [
-                    'item_id' => $data['item_id'],
-                    'team_id' => $data['team_id'],
-                    'qty' => $qty,
-                ],
-            ],
+            'team_details' => [$line],
         ];
     }
 }

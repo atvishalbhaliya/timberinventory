@@ -18,7 +18,7 @@ class TeamLedgerService
             'transaction_type' => 'Production',
             'transaction_date' => $movement['transaction_date'],
             'qty' => $movement['qty'],
-            'amount' => $movement['amount'] ?? 0,
+            'amount' => $movement['amount'] ?? $movement['labour_rate'] ?? $movement['production_rate'] ?? 0,
             'reference_type' => $movement['reference_type'] ?? null,
             'reference_id' => $movement['reference_id'] ?? null,
             'created_by' => $movement['user_id'] ?? null,
@@ -30,7 +30,8 @@ class TeamLedgerService
 
     public function recordDispatch(array $movement): int
     {
-        $amount = $movement['amount'] ?? ((float) $movement['qty'] * (float) ($movement['rate_per_pallet'] ?? 0));
+        $rate = (float) ($movement['labour_rate'] ?? $movement['rate_per_pallet'] ?? 0);
+        $amount = $movement['amount'] ?? ((float) $movement['qty'] * $rate);
 
         return DB::table('team_ledger')->insertGetId([
             'tenant_id' => $movement['tenant_id'],
@@ -89,7 +90,7 @@ class TeamLedgerService
             $query->where(function ($builder) use ($search): void {
                 $builder->orWhere('team_master.team_name', 'like', "%{$search}%")
                     ->orWhere('team_master.team_code', 'like', "%{$search}%")
-                    ->orWhere('pallet_model_master.model_name', 'like', "%{$search}%")
+                    ->orWhere('item_master.item_name', 'like', "%{$search}%")
                     ->orWhere('team_ledger.transaction_type', 'like', "%{$search}%")
                     ->orWhere('team_ledger.reference_type', 'like', "%{$search}%");
             });

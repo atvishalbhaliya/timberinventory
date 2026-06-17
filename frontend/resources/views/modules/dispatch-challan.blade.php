@@ -203,7 +203,7 @@ const storedUser = (() => {
 })();
 const hasPermission = (permission) => storedUser.role_name === 'Super Admin' || (storedUser.permissions || []).includes(permission);
 const canManageDispatch = hasPermission('dispatch.manage') && hasPermission('masters.view');
-const blankLine = () => ({ item_id: '', team_id: '', qty: '' });
+const blankLine = () => ({ item_id: '', team_id: '', qty: '', production_qty: '', labour_rate: '' });
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;',
@@ -307,23 +307,76 @@ function renderLines(readonly = false) {
         <tr>
             <td><select class="line-select" data-line="${index}" data-field="item_id" ${readonly ? 'disabled' : ''}>${optionList(lookups.models, 'item_id', 'item_name', 'Select finish product')}</select></td>
             <td><select class="line-select" data-line="${index}" data-field="team_id" ${readonly ? 'disabled' : ''}>${optionList(lookups.teams, 'team_id', 'team_name', 'Select team')}</select></td>
+            <td><input class="line-input line-number" data-line="${index}" data-field="production_qty" type="number" min="0" step="0.001" value="${escapeHtml(line.production_qty || '')}" disabled></td>
+            <td><input class="line-input line-number" data-line="${index}" data-field="labour_rate" type="number" min="0" step="0.01" value="${escapeHtml(line.labour_rate || '')}" ${readonly ? 'disabled' : ''}></td>
             <td><input class="line-input line-number" data-line="${index}" data-field="qty" type="number" min="0" step="0.001" value="${escapeHtml(line.qty || '')}" ${readonly ? 'disabled' : ''}></td>
             <td class="text-end">${readonly ? '' : `<button class="icon-btn" type="button" data-remove-line="${index}" title="Remove" ${lines.length === 1 ? 'disabled' : ''}><i data-lucide="trash-2"></i></button>`}</td>
         </tr>
     `).join('');
     lines.forEach((line, index) => {
-        ['item_id', 'team_id'].forEach((field) => {
+        ['item_id', 'team_id', 'qty', 'production_qty', 'labour_rate'].forEach((field) => {
             const input = document.querySelector(`[data-line="${index}"][data-field="${field}"]`);
             if (input) input.value = line[field] || '';
         });
     });
     document.getElementById('modal-total-qty').textContent = qty(lines.reduce((sum, line) => sum + Number(line.qty || 0), 0));
     lucide?.createIcons();
+    refreshAllLineMetrics();
 }
 
 function appendLine(readonly = false) {
     lines.push(blankLine());
     renderLines(readonly);
+}
+
+async function loadLineMetrics(index) {
+    const line = lines[index];
+    if (!line) {
+        return;
+    }
+
+    if (!line.item_id || !line.team_id) {
+        line.production_qty = '';
+        line.labour_rate = '';
+        const productionQtyInput = document.querySelector(`[data-line="${index}"][data-field="production_qty"]`);
+        const labourRateInput = document.querySelector(`[data-line="${index}"][data-field="labour_rate"]`);
+        if (productionQtyInput) productionQtyInput.value = '';
+        if (labourRateInput) labourRateInput.value = '';
+        return;
+    }
+
+    const sourceLocation = document.getElementById('modal-source-location')?.value || '';
+    try {
+        const response = await axios.get(`${endpoint}/line-metrics`, {
+            params: {
+                item_id: line.item_id,
+                team_id: line.team_id,
+                location_id: sourceLocation || undefined,
+            },
+        });
+        const metrics = response.data.data || {};
+        line.production_qty = metrics.production_qty ?? metrics.current_qty ?? '';
+        line.labour_rate = metrics.labour_rate ?? '';
+        const productionQtyInput = document.querySelector(`[data-line="${index}"][data-field="production_qty"]`);
+        const labourRateInput = document.querySelector(`[data-line="${index}"][data-field="labour_rate"]`);
+        if (productionQtyInput) productionQtyInput.value = line.production_qty;
+        if (labourRateInput) labourRateInput.value = line.labour_rate;
+    } catch {
+        line.production_qty = '';
+        line.labour_rate = '';
+        const productionQtyInput = document.querySelector(`[data-line="${index}"][data-field="production_qty"]`);
+        const labourRateInput = document.querySelector(`[data-line="${index}"][data-field="labour_rate"]`);
+        if (productionQtyInput) productionQtyInput.value = '';
+        if (labourRateInput) labourRateInput.value = '';
+    }
+}
+
+function refreshAllLineMetrics() {
+    lines.forEach((line, index) => {
+        if (line?.item_id && line?.team_id) {
+            loadLineMetrics(index);
+        }
+    });
 }
 
 function modalHtml(readonly = false) {
@@ -341,17 +394,18 @@ function modalHtml(readonly = false) {
             <div class="table-toolbar" style="padding:0;">
                 <div>
                     <h3 class="erp-card-title">Team Dispatch Lines</h3>
-                    <p class="text-muted" style="margin:4px 0 0;font-size:12px;">Choose finish product, team, and quantity for each line.</p>
+                    <p class="text-muted" style="margin:4px 0 0;font-size:12px;">Choose finish product, team, and quantity. Production and rate are pulled from the stock ledger.</p>
                 </div>
                 ${readonly ? '' : canManageDispatch ? '<button class="btn-erp btn-primary" type="button" data-action="add-line"><i data-lucide="plus"></i> Add Line</button>' : ''}
             </div>
             <div class="table-responsive dispatch-lines-wrap">
                 <table class="table">
-                    <thead>
+                <thead>
                         <tr>
-                         <th>Finish Product</th>
+                            <th>Finish Product</th>
                             <th>Team</th>
-                           
+                            <th class="text-end">Production</th>
+                            <th class="text-end">Labour Rate</th>
                             <th class="text-end">Qty</th>
                             <th class="text-end">Actions</th>
                         </tr>
@@ -416,7 +470,8 @@ function fillModal(row) {
             item_id: detail.item_id || '',
             team_id: detail.team_id || '',
             qty: detail.qty || '',
-        })) : [{ item_id: '', team_id: '', qty: '' }];
+            labour_rate: detail.labour_rate || detail.production_rate || '',
+        })) : [{ item_id: '', team_id: '', qty: '', labour_rate: '' }];
         renderLines(activeMode === 'view');
     });
 }
@@ -434,6 +489,7 @@ function formPayload() {
             item_id: line.item_id,
             team_id: line.team_id,
             qty: line.qty,
+            labour_rate: line.labour_rate,
         })),
     };
 }
@@ -556,12 +612,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!input) return;
         lines[Number(input.dataset.line)][input.dataset.field] = input.value;
         document.getElementById('modal-total-qty').textContent = qty(lines.reduce((sum, line) => sum + Number(line.qty || 0), 0));
+        if (['item_id', 'team_id'].includes(input.dataset.field)) {
+            loadLineMetrics(Number(input.dataset.line));
+        }
     });
 
     document.addEventListener('change', (event) => {
         const input = event.target.closest('#modal-lines [data-line][data-field]');
         if (!input) return;
         lines[Number(input.dataset.line)][input.dataset.field] = input.value;
+        if (['item_id', 'team_id'].includes(input.dataset.field)) {
+            loadLineMetrics(Number(input.dataset.line));
+        }
+        if (input.id === 'modal-source-location') {
+            refreshAllLineMetrics();
+        }
     });
 
     [per_page, date_from, date_to, customer_id, source_location_id].forEach((input) => input.addEventListener('change', () => load(1)));

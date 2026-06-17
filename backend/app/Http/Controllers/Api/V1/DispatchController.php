@@ -32,6 +32,15 @@ class DispatchController extends Controller
         ]);
     }
 
+    public function lineMetrics(Request $request): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Dispatch line metrics loaded.',
+            'data' => $this->dispatch->lineMetrics($request),
+        ]);
+    }
+
     public function show(Request $request, int $id): JsonResponse
     {
         return response()->json([

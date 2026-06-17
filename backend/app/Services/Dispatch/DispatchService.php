@@ -177,6 +177,7 @@ class DispatchService
             'team_details.*.item_id' => ['required', 'integer', Rule::exists('item_master', 'item_id')->where('item_type', 'Finish Product')],
             'team_details.*.team_id' => ['required', 'integer', 'exists:team_master,team_id'],
             'team_details.*.qty' => ['required', 'numeric', 'gt:0'],
+            'team_details.*.labour_rate' => ['nullable', 'numeric', 'gte:0'],
         ]);
 
         $user = $request->user();
@@ -220,6 +221,7 @@ class DispatchService
                     'location_id' => $data['source_location_id'] ?? null,
                     'team_id' => $detail['team_id'],
                     'qty' => $detail['qty'],
+                    'labour_rate' => $detail['labour_rate'] ?? 0,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -247,6 +249,7 @@ class DispatchService
             'team_details.*.item_id' => ['required', 'integer', Rule::exists('item_master', 'item_id')->where('item_type', 'Finish Product')],
             'team_details.*.team_id' => ['required', 'integer', 'exists:team_master,team_id'],
             'team_details.*.qty' => ['required', 'numeric', 'gt:0'],
+            'team_details.*.labour_rate' => ['nullable', 'numeric', 'gte:0'],
         ]);
 
         $context = $this->scopedMasterForUpdate($request, $id);
@@ -301,6 +304,7 @@ class DispatchService
                     'location_id' => $data['source_location_id'] ?? $context->source_location_id ?? null,
                     'team_id' => $detail['team_id'],
                     'qty' => $detail['qty'],
+                    'labour_rate' => $detail['labour_rate'] ?? 0,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -339,6 +343,48 @@ class DispatchService
         return $this->paginate($request)->getCollection();
     }
 
+    public function lineMetrics(Request $request): array
+    {
+        $data = $request->validate([
+            'item_id' => ['required', 'integer', 'exists:item_master,item_id'],
+            'team_id' => ['required', 'integer', 'exists:team_master,team_id'],
+            'location_id' => ['nullable', 'integer', 'exists:storage_location_master,location_id'],
+        ]);
+
+        $user = $request->user();
+
+        $query = DB::table('stock_ledger')
+            ->where('tenant_id', $user->tenant_id)
+           
+            ->where('item_id', $data['item_id'])
+            ->where('team_id', $data['team_id']);
+
+        if (! empty($data['location_id'])) {
+            $query->where('location_id', $data['location_id']);
+        }
+
+        $summary = $query->selectRaw('COALESCE(SUM(qty_in), 0) as total_in')
+            ->selectRaw('COALESCE(SUM(qty_out), 0) as total_out')
+            ->selectRaw('COALESCE(SUM(CASE WHEN qty_in > 0 THEN qty_in ELSE 0 END), 0) as incoming_qty')
+            ->selectRaw('COALESCE(SUM(CASE WHEN qty_in > 0 THEN labour_charge ELSE 0 END), 0) as labour_value')
+            ->first();
+
+        $currentQty = (float) ($summary->total_in ?? 0) - (float) ($summary->total_out ?? 0);
+        $incomingQty = (float) ($summary->incoming_qty ?? 0);
+        $labourValue = (float) ($summary->labour_value ?? 0);
+
+        $labourRate = $incomingQty > 0
+            ? $labourValue / $incomingQty
+            : 0;
+
+        return [
+            'current_qty' => round($currentQty, 3),
+            'production_qty' => round($currentQty, 3),
+            'labour_rate' => round($labourRate, 2),
+            'stock_value' => round($currentQty * $labourRate, 2),
+        ];
+    }
+
     private function scopedMasterForUpdate(Request $request, int $id): object
     {
         $user = $request->user();
@@ -363,7 +409,8 @@ class DispatchService
     private function recordStockOutMovements(Request $request, object $header, Collection $details, Collection $teamRates): void
     {
         $movements = $details->map(function ($detail) use ($header, $request, $teamRates): array {
-            $locationId = (int) ($detail->location_id ?? $header->source_location_id ?? 0);
+            $locationId = (int) ($detail['location_id'] ?? $header->source_location_id ?? 0);
+            $labourRate = $this->resolveLabourRate($detail, $teamRates);
 
             if ($locationId <= 0) {
                 throw ValidationException::withMessages(['source_location_id' => 'Location is required for dispatch stock deduction.']);
@@ -374,7 +421,8 @@ class DispatchService
                 'location_id' => $locationId,
                 'qty' => (float) $detail['qty'],
                 'team_id' => (int) $detail['team_id'],
-                'labour_charge' => (float) $detail['qty'] * (float) $teamRates->get((int) $detail['team_id'], 0),
+                'labour_rate' => $labourRate,
+                'labour_charge' => (float) $detail['qty'] * $labourRate,
             ];
         });
 
@@ -385,6 +433,7 @@ class DispatchService
                 'tenant_id' => $header->tenant_id,
                 'branch_id' => $header->branch_id,
                 'item_id' => $movement['item_id'],
+                 'pallet_model_id' => $movement['item_id'],
                 'location_id' => $movement['location_id'],
                 'team_id' => $movement['team_id'],
                 'transaction_date' => $header->challan_date.' 00:00:00',
@@ -404,18 +453,18 @@ class DispatchService
         foreach ($details as $detail) {
             $teamId = (int) $detail['team_id'];
             $qty = (float) $detail['qty'];
-            $rate = (float) $teamRates->get($teamId, 0);
+            $rate = $this->resolveLabourRate($detail, $teamRates);
             $labourCharge = $qty * $rate;
 
             $this->teamLedger->recordDispatch([
                 'tenant_id' => $header->tenant_id,
                 'branch_id' => $header->branch_id,
                 'team_id' => $teamId,
-                'pallet_model_id' => null,
+                'pallet_model_id' => $detail['item_id'],
                 'transaction_date' => $header->challan_date,
                 'qty' => $qty,
                 'amount' => $labourCharge,
-                'rate_per_pallet' => $rate,
+                'labour_rate' => $rate,
                 'reference_type' => self::REFERENCE_TYPE,
                 'reference_id' => $header->challan_id,
                 'user_id' => $request->user()?->id,
@@ -519,5 +568,17 @@ class DispatchService
         return DB::table('team_master')
             ->whereIn('team_id', $details->pluck('team_id')->filter()->unique())
             ->pluck('rate_per_pallet', 'team_id');
+    }
+
+    private function resolveLabourRate($detail, Collection $teamRates): float
+    {
+        $teamId = is_array($detail) ? (int) ($detail['team_id'] ?? 0) : (int) ($detail->team_id ?? 0);
+        $detailRate = is_array($detail) ? (float) ($detail['labour_rate'] ?? 0) : (float) ($detail->labour_rate ?? 0);
+
+        if ($detailRate > 0) {
+            return $detailRate;
+        }
+
+        return (float) $teamRates->get($teamId, 0);
     }
 }
