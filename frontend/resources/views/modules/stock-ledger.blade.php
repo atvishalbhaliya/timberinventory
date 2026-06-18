@@ -60,6 +60,7 @@
                         <th data-col="reference_type"><button class="sort-head" data-sort="reference_type" type="button">Ref Type <i data-lucide="chevrons-up-down"></i></button></th>
                         <th data-col="reference_id"><button class="sort-head" data-sort="reference_id" type="button">Ref # <i data-lucide="chevrons-up-down"></i></button></th>
                         <th data-col="item"><button class="sort-head" data-sort="item_name" type="button">Item <i data-lucide="chevrons-up-down"></i></button></th>
+                        <th data-col="item_code"><button class="sort-head" data-sort="item_code" type="button">Item Code<i data-lucide="chevrons-up-down"></i></button></th>
                         <th data-col="material_type"><button class="sort-head" data-sort="material_type_name" type="button">Material Type <i data-lucide="chevrons-up-down"></i></button></th>
                         <th data-col="location"><button class="sort-head" data-sort="location_name" type="button">Location <i data-lucide="chevrons-up-down"></i></button></th>
                         <th data-col="stock_type"><button class="sort-head" data-sort="stock_type" type="button">Stock Type <i data-lucide="chevrons-up-down"></i></button></th>
@@ -73,6 +74,7 @@
                         <th data-col="reference_type"><select id="col-reference-type"><option value="">All</option><option>GRN</option><option>Production</option><option>Production Consumption</option><option>Production Output</option><option>Dispatch</option><option>Wastage</option><option>Reuse</option><option>Adjustment</option></select></th>
                         <th data-col="reference_id"><input id="col-reference" type="search" placeholder="Search"></th>
                         <th data-col="item"><input id="col-item" type="search" placeholder="Search"></th>
+                        <th data-col="item_code"><input id="col-item_code" type="search" placeholder="Search"></th>
                         <th data-col="material_type"><select id="col-material-type"></select></th>
                         <th data-col="location"><select id="col-location"></select></th>
                         <th data-col="stock_type"></th>
@@ -178,6 +180,7 @@ const columnOptions=[
     ['reference_type','Ref Type'],
     ['reference_id','Ref #'],
     ['item','Item'],
+    ['item_code','Item Code'],
     ['material_type','Material Type'],
     ['location','Location'],
     ['stock_type','Stock Type'],
@@ -186,7 +189,7 @@ const columnOptions=[
     ['running_balance','Running Balance'],
     ['created_by','Created By'],
 ];
-const defaultVisibleColumns=['transaction_date','reference_type','reference_id','item','location','stock_type','qty_in','qty_out','running_balance'];
+const defaultVisibleColumns=['transaction_date','reference_type','reference_id','item','item_code','location','stock_type','qty_in','qty_out','running_balance'];
 const columnStorageKey='stockLedger.visibleColumns.v2';
 let page=1,last=1,timer,ledgerRows=[],sortBy=sessionStorage.getItem('stockLedger.sortBy')||'transaction_date',sortDirection=sessionStorage.getItem('stockLedger.sortDirection')||'desc',visibleColumns=readVisibleColumns(),paginationMeta={from:0,to:0,total:0};
 
@@ -197,7 +200,7 @@ async function boot(){const [items,types,locs]=await Promise.all([lookup('/v1/it
 function field(id){return document.getElementById(id)}
 function params(){return {page,per_page:per_page.value,search:search.value,date_from:date_from.value,date_to:date_to.value,item_id:item_id.value,material_type_id:colMaterialType.value||material_type_id.value,location_id:colLocation.value||location_id.value,reference_type:colReferenceType.value||reference_type.value,reference_number:reference_number.value,ledger_date:colLedgerDate.value,reference_search:colReference.value,item_search:colItem.value,qty_in_min:colQtyInMin.value,qty_out_min:colQtyOutMin.value,balance_min:colBalanceMin.value,created_by:colCreatedBy.value,sort_by:sortBy,sort_direction:sortDirection}}
 async function load(p=page){page=p;storeState();rows.innerHTML='<tr class="skeleton-row"><td colspan="11"></td></tr><tr class="skeleton-row"><td colspan="11"></td></tr>';const r=await axios.get(endpoint,{params:params()});const data=r.data.data;page=data.current_page;last=data.last_page;paginationMeta={from:data.from||0,to:data.to||0,total:data.total||0};ledgerRows=data.data||[];renderRows();renderSortHeaders();renderPager()}
-function renderRows(){rows.innerHTML=ledgerRows.length?ledgerRows.map(x=>`<tr><td data-col="transaction_date">${x.transaction_date}</td><td data-col="reference_type">${x.reference_type||x.transaction_type}</td><td data-col="reference_id">${x.reference_id||''}</td><td data-col="item">${x.item_name}</td><td data-col="material_type">${x.material_type_name||''}</td><td data-col="location">${x.location_name||''}</td><td data-col="stock_type">${x.stock_type||'Fresh'}</td><td data-col="qty_in" class="text-end">${x.qty_in}</td><td data-col="qty_out" class="text-end">${x.qty_out}</td><td data-col="running_balance" class="text-end">${x.running_balance}</td><td data-col="created_by">${x.created_by_name||''}</td></tr>`).join(''):'<tr><td colspan="11" class="text-muted">No ledger entries found.</td></tr>';applyColumnVisibility();lucide?.createIcons()}
+function renderRows(){rows.innerHTML=ledgerRows.length?ledgerRows.map(x=>`<tr><td data-col="transaction_date">${x.transaction_date}</td><td data-col="reference_type">${x.reference_type||x.transaction_type}</td><td data-col="reference_id">${x.reference_id||''}</td><td data-col="item">${x.item_name}</td><td data-col="item_code">${x.item_code}</td><td data-col="material_type">${x.material_type_name||''}</td><td data-col="location">${x.location_name||''}</td><td data-col="stock_type">${x.stock_type||'Fresh'}</td><td data-col="qty_in" class="text-end">${x.qty_in}</td><td data-col="qty_out" class="text-end">${x.qty_out}</td><td data-col="running_balance" class="text-end">${x.running_balance}</td><td data-col="created_by">${x.created_by_name||''}</td></tr>`).join(''):'<tr><td colspan="11" class="text-muted">No ledger entries found.</td></tr>';applyColumnVisibility();lucide?.createIcons()}
 function renderSortHeaders(){document.querySelectorAll('[data-sort]').forEach(button=>{const active=button.dataset.sort===sortBy;button.classList.toggle('is-active',active);const label=button.dataset.label||button.textContent.trim();button.dataset.label=label;button.innerHTML=`${label} <i data-lucide="${active?(sortDirection==='asc'?'arrow-up':'arrow-down'):'chevrons-up-down'}"></i>`});lucide?.createIcons()}
 function pageRange(){const pages=[];if(last<=7){for(let i=1;i<=last;i++)pages.push(i);return pages}pages.push(1);let start=Math.max(2,page-1),end=Math.min(last-1,page+1);if(page<=2){start=2;end=3}else if(page>=last-1){start=last-2;end=last-1}if(start>2)pages.push('...');for(let i=start;i<=end;i++)pages.push(i);if(end<last-1)pages.push('...');pages.push(last);return pages}
 function renderPager(){pageLinks.innerHTML=pageRange().map(value=>value==='...'?'<span class="page-number-ellipsis">...</span>':`<button class="btn-erp btn-page-number ${Number(value)===page?'is-active':''}" type="button" data-page="${value}">${value}</button>`).join('');pageStatus.textContent=paginationMeta.total?`Showing ${paginationMeta.from} to ${paginationMeta.to} of ${paginationMeta.total} records`:'Showing 0 to 0 of 0 records';document.querySelector('[data-action="prev-page"]').disabled=page<=1;document.querySelector('[data-action="next-page"]').disabled=page>=last;lucide?.createIcons()}
