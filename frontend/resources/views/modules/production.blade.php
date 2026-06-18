@@ -4,7 +4,7 @@
 
 @section('content')
     <section class="erp-card production-list-card">
-        <div class="production-card-head">
+        <div class="production-card-head" id="production-card-head">
             <div>
                 <h1>Production Entry</h1>
                 <p class="text-muted">Draft, post, and cancel production with stock impact.</p>
@@ -15,93 +15,109 @@
             </div>
         </div>
 
-        <div class="production-filter-row" id="production-filter-row" hidden>
-            <div class="production-filter-group">
-                <label class="production-filter-field">
-                    <span>Date From</span>
-                    <input id="filter-date-from" type="date">
-                </label>
-                <label class="production-filter-field">
-                    <span>Date To</span>
-                    <input id="filter-date-to" type="date">
-                </label>
-                <label class="production-filter-field">
-                    <span>BOM</span>
-                    <select id="filter-bom"></select>
-                </label>
-                <label class="production-filter-field">
-                    <span>Team</span>
-                    <select id="filter-team"></select>
-                </label>
-                <label class="production-filter-field">
-                    <span>Produced Item</span>
-                    <select id="filter-produced-item"></select>
-                </label>
-                <label class="production-filter-field">
-                    <span>Status</span>
-                    <select id="filter-status"><option value="">All Status</option><option>Draft</option><option>Posted</option><option>Cancelled</option></select>
-                </label>
-                <div class="production-filter-actions">
-                    <button class="btn-erp btn-primary btn-filter" type="button" data-action="apply-filters"><i data-lucide="filter"></i> Apply</button>
-                    <button class="btn-erp btn-filter btn-filter-secondary" type="button" data-action="reset-filters"><i data-lucide="filter-x"></i> Reset</button>
+        <section class="production-editor-card" id="production-editor-card" hidden>
+            <div class="production-editor-head">
+                <div>
+                    <h2 id="production-editor-title">Add Production</h2>
+                    <p class="text-muted" id="production-editor-subtitle">Create or update a production entry without leaving the page.</p>
+                </div>
+                <div class="module-actions">
+                    <button class="btn-erp" type="button" data-action="close-production-form"><i data-lucide="x"></i> Cancel</button>
+                    <button class="btn-erp btn-primary" type="button" data-action="save-production"><i data-lucide="save"></i> Save Draft</button>
                 </div>
             </div>
-        </div>
+            <div id="production-editor-body"></div>
+        </section>
 
-        <div class="table-toolbar production-table-toolbar">
-            <div class="data-grid-controls">
-                <select id="per_page"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select>
-                <div class="column-picker">
-                    <button class="btn-erp btn-column-picker" type="button" data-action="toggle-columns" aria-expanded="false"><i data-lucide="columns-3"></i> Columns</button>
-                    <div class="column-picker-menu" id="column-picker-menu"></div>
+        <div id="production-list-content">
+            <div class="production-filter-row" id="production-filter-row" hidden>
+                <div class="production-filter-group">
+                    <label class="production-filter-field">
+                        <span>Date From</span>
+                        <input id="filter-date-from" type="date">
+                    </label>
+                    <label class="production-filter-field">
+                        <span>Date To</span>
+                        <input id="filter-date-to" type="date">
+                    </label>
+                    <label class="production-filter-field">
+                        <span>BOM</span>
+                        <select id="filter-bom"></select>
+                    </label>
+                    <label class="production-filter-field">
+                        <span>Team</span>
+                        <select id="filter-team"></select>
+                    </label>
+                    <label class="production-filter-field">
+                        <span>Produced Item</span>
+                        <select id="filter-produced-item"></select>
+                    </label>
+                    <label class="production-filter-field">
+                        <span>Status</span>
+                        <select id="filter-status"><option value="">All Status</option><option>Draft</option><option>Posted</option><option>Cancelled</option></select>
+                    </label>
+                    <div class="production-filter-actions">
+                        <button class="btn-erp btn-primary btn-filter" type="button" data-action="apply-filters"><i data-lucide="filter"></i> Apply</button>
+                        <button class="btn-erp btn-filter btn-filter-secondary" type="button" data-action="reset-filters"><i data-lucide="filter-x"></i> Reset</button>
+                    </div>
                 </div>
-                <button class="btn-erp btn-filter-toggle" type="button" data-action="toggle-filter-row" aria-controls="production-filter-row production-filter-head" aria-pressed="false" title="Show filters"><i data-lucide="filter"></i> Filters</button>
             </div>
-            <div class="module-search">
-                <i data-lucide="search"></i>
-                <input id="search" type="search" placeholder="Search production, BOM, team">
-                <button class="search-clear" data-action="clear-search" type="button" title="Clear search"><i data-lucide="x"></i></button>
-            </div>
-        </div>
 
-        <div class="table-responsive production-data-table-wrap">
-            <table class="table production-data-table">
-                <thead>
-                    <tr>
-                        <th data-col="production_no"><button class="sort-head" data-sort="production_no" type="button">Production No <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="date"><button class="sort-head" data-sort="production_date" type="button">Date <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="bom"><button class="sort-head" data-sort="bom_no" type="button">BOM <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="team"><button class="sort-head" data-sort="team_name" type="button">Team <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="item"><button class="sort-head" data-sort="produced_item_name" type="button">Produced Item <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="qty" class="text-end"><button class="sort-head sort-end" data-sort="produced_qty" type="button">Qty <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="status"><button class="sort-head" data-sort="status" type="button">Status <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th class="text-end action-col">Actions</th>
-                    </tr>
-                    <tr class="production-filter-head" id="production-filter-head" hidden>
-                        <th data-col="production_no"><input id="col-production-no" type="search" placeholder="Search"></th>
-                        <th data-col="date"><input id="col-date" type="date"></th>
-                        <th data-col="bom"><input id="col-bom" type="search" placeholder="Search"></th>
-                        <th data-col="team"><input id="col-team" type="search" placeholder="Search"></th>
-                        <th data-col="item"><input id="col-produced-item" type="search" placeholder="Search"></th>
-                        <th data-col="qty"><input id="col-qty-min" type="number" min="0" step="0.001" placeholder="Min"></th>
-                        <th data-col="status"><select id="col-status"><option value="">All</option><option>Draft</option><option>Posted</option><option>Cancelled</option></select></th>
-                        <th class="action-col"></th>
-                    </tr>
-                </thead>
-                <tbody id="rows"><tr class="skeleton-row"><td colspan="8"></td></tr></tbody>
-            </table>
-        </div>
-
-        <div class="pagination-row">
-            <div class="pager-actions">
-                <button class="btn-erp btn-page-nav" data-action="prev-page" type="button" title="Previous"><i data-lucide="chevron-left"></i></button>
-                <span id="page-links" class="page-number-list"></span>
-                <button class="btn-erp btn-page-nav" data-action="next-page" type="button" title="Next"><i data-lucide="chevron-right"></i></button>
-                <span id="page-status" class="page-record-status text-muted"></span>
+            <div class="table-toolbar production-table-toolbar">
+                <div class="data-grid-controls">
+                    <select id="per_page"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select>
+                    <div class="column-picker">
+                        <button class="btn-erp btn-column-picker" type="button" data-action="toggle-columns" aria-expanded="false"><i data-lucide="columns-3"></i> Columns</button>
+                        <div class="column-picker-menu" id="column-picker-menu"></div>
+                    </div>
+                    <button class="btn-erp btn-filter-toggle" type="button" data-action="toggle-filter-row" aria-controls="production-filter-row production-filter-head" aria-pressed="false" title="Show filters"><i data-lucide="filter"></i> Filters</button>
+                </div>
+                <div class="module-search">
+                    <i data-lucide="search"></i>
+                    <input id="search" type="search" placeholder="Search production, BOM, team">
+                    <button class="search-clear" data-action="clear-search" type="button" title="Clear search"><i data-lucide="x"></i></button>
+                </div>
             </div>
-            <div class="module-actions">
-                <button class="btn-erp" data-action="export"><i data-lucide="file-spreadsheet"></i> Export CSV</button>
-                <button class="btn-erp" data-action="print"><i data-lucide="printer"></i> Print</button>
+
+            <div class="table-responsive production-data-table-wrap">
+                <table class="table production-data-table">
+                    <thead>
+                        <tr>
+                            <th data-col="production_no"><button class="sort-head" data-sort="production_no" type="button">Production No <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="date"><button class="sort-head" data-sort="production_date" type="button">Date <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="bom"><button class="sort-head" data-sort="bom_no" type="button">BOM <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="team"><button class="sort-head" data-sort="team_name" type="button">Team <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="item"><button class="sort-head" data-sort="produced_item_name" type="button">Produced Item <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="qty" class="text-end"><button class="sort-head sort-end" data-sort="produced_qty" type="button">Qty <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="status"><button class="sort-head" data-sort="status" type="button">Status <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th class="text-end action-col">Actions</th>
+                        </tr>
+                        <tr class="production-filter-head" id="production-filter-head" hidden>
+                            <th data-col="production_no"><input id="col-production-no" type="search" placeholder="Search"></th>
+                            <th data-col="date"><input id="col-date" type="date"></th>
+                            <th data-col="bom"><input id="col-bom" type="search" placeholder="Search"></th>
+                            <th data-col="team"><input id="col-team" type="search" placeholder="Search"></th>
+                            <th data-col="item"><input id="col-produced-item" type="search" placeholder="Search"></th>
+                            <th data-col="qty"><input id="col-qty-min" type="number" min="0" step="0.001" placeholder="Min"></th>
+                            <th data-col="status"><select id="col-status"><option value="">All</option><option>Draft</option><option>Posted</option><option>Cancelled</option></select></th>
+                            <th class="action-col"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows"><tr class="skeleton-row"><td colspan="8"></td></tr></tbody>
+                </table>
+            </div>
+
+            <div class="pagination-row">
+                <div class="pager-actions">
+                    <button class="btn-erp btn-page-nav" data-action="prev-page" type="button" title="Previous"><i data-lucide="chevron-left"></i></button>
+                    <span id="page-links" class="page-number-list"></span>
+                    <button class="btn-erp btn-page-nav" data-action="next-page" type="button" title="Next"><i data-lucide="chevron-right"></i></button>
+                    <span id="page-status" class="page-record-status text-muted"></span>
+                </div>
+                <div class="module-actions">
+                    <button class="btn-erp" data-action="export"><i data-lucide="file-spreadsheet"></i> Export CSV</button>
+                    <button class="btn-erp" data-action="print"><i data-lucide="printer"></i> Print</button>
+                </div>
             </div>
         </div>
     </section>
@@ -113,6 +129,10 @@
     .production-card-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 20px 16px; border-bottom:1px solid var(--border); background:linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 48%, var(--surface)), var(--surface)); }
     .production-card-head h1 { margin:0; font-size:22px; line-height:1.2; font-weight:800; }
     .production-card-head p { margin:5px 0 0; }
+    .production-editor-card { display:grid; gap:16px; margin:0 0 16px; padding:20px; border-bottom:1px solid var(--border); background:var(--surface); box-shadow:0 8px 22px rgba(15,23,42,.08); }
+    .production-editor-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+    .production-editor-head h2 { margin:0; font-size:18px; font-weight:800; }
+    .production-editor-head p { margin:4px 0 0; }
     .production-filter-row { display:flex; align-items:flex-end; justify-content:center; gap:10px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface); }
     .production-filter-group { display:flex; align-items:flex-end; justify-content:center; gap:10px; flex:1 1 auto; flex-wrap:wrap; max-width:1320px; }
     .production-filter-field { display:grid; gap:5px; flex:1 1 150px; min-width:140px; max-width:190px; margin:0; }
@@ -243,16 +263,20 @@ async function fetchBomData(){const bomId=document.getElementById('modal-bom-id'
 function applyBomHeader(data){if(!data)return;const item=document.getElementById('modal-produced-item-id'),bom=data.bom;if(data.produced_item_id)item.value=data.produced_item_id;if(bom?.version_no)document.getElementById('modal-reference-label').textContent=`Version: ${bom.version_no}`}
 async function applyBomSelection(){const data=await fetchBomData();applyBomHeader(data)}
 async function loadBomLines(){const bomId=document.getElementById('modal-bom-id').value;if(!bomId){window.ErpToast?.show('Select a BOM first.','danger');return}const data=await fetchBomData();applyBomHeader(data);document.getElementById('modal-consumption-rows').innerHTML='';(data?.materials||[]).forEach(row=>consumptionLine(row,false));}
-async function openProductionModal(mode,id=null){activeMode=mode;activeId=id;let readonly=mode==='view';window.ErpModal.open({title:mode==='create'?'Add Production':mode==='edit'?'Edit Production':'Display Production',subtitle:'Production master and material consumption rows',size:'xl',body:productionModalBody(readonly),footer:readonly?'<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button>':'<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-action="save-production"><i data-lucide="save"></i> Save Draft</button>'});if(mode==='create'){document.getElementById('modal-production-date').value=new Date().toISOString().slice(0,10);document.getElementById('modal-produced-qty').value=1;document.getElementById('modal-production-cost').value=0;document.getElementById('modal-labour-charge').value=0;const r=await axios.get(endpoint+'/next-number');document.getElementById('modal-production-no').value=r.data.data.production_no;return}const r=await axios.get(`${endpoint}/${id}`);const x=r.data.data;readonly=mode==='view'||x.status!=='Draft';document.getElementById('modal-status-label').innerHTML=badge(x.status);document.getElementById('modal-reference-label').textContent=x.posted_at?`Posted: ${x.posted_at}`:x.cancelled_at?`Cancelled: ${x.cancelled_at}`:'';document.getElementById('modal-production-no').value=x.production_no;document.getElementById('modal-production-date').value=x.production_date;document.getElementById('modal-bom-id').value=x.bom_id;document.getElementById('modal-produced-item-id').value=x.produced_item_id;document.getElementById('modal-team-id').value=x.team_id;document.getElementById('modal-fg-location-id').value=x.fg_location_id;document.getElementById('modal-produced-qty').value=x.produced_qty;document.getElementById('modal-production-cost').value=x.production_cost;document.getElementById('modal-labour-charge').value=x.labour_charge||0;document.getElementById('modal-remarks').value=x.remarks||'';document.getElementById('modal-audit-section').hidden=false;document.getElementById('modal-audit-grid').innerHTML=auditSection(x);(x.consumptions||[]).forEach(row=>consumptionLine(row,readonly));if(readonly){document.querySelectorAll('#modal-production-date,#modal-bom-id,#modal-produced-item-id,#modal-team-id,#modal-fg-location-id,#modal-produced-qty,#modal-production-cost,#modal-labour-charge,#modal-remarks').forEach(el=>el.disabled=true)}}
+function showProductionEditor(mode){activeMode=mode;const editor=document.getElementById('production-editor-card');const head=document.getElementById('production-card-head');const list=document.getElementById('production-list-content');document.getElementById('production-editor-title').textContent=mode==='create'?'Add Production':'Edit Production';document.getElementById('production-editor-subtitle').textContent=mode==='create'?'Create a new production entry without leaving the page.':'Update the production entry and keep the list hidden while editing.';document.getElementById('production-editor-body').innerHTML=productionModalBody(false);if(head)head.hidden=true;if(list)list.hidden=true;editor.hidden=false;editor.scrollIntoView({behavior:'smooth',block:'start'});lucide?.createIcons()}
+function hideProductionEditor(){const head=document.getElementById('production-card-head');const list=document.getElementById('production-list-content');document.getElementById('production-editor-card').hidden=true;document.getElementById('production-editor-body').innerHTML='';if(head)head.hidden=false;if(list)list.hidden=false;activeId=null;activeMode='create'}
+async function loadProductionEditorForCreate(){showProductionEditor('create');document.getElementById('modal-status-label').textContent='Draft';document.getElementById('modal-reference-label').textContent='';document.getElementById('modal-production-date').value=new Date().toISOString().slice(0,10);document.getElementById('modal-produced-qty').value=1;document.getElementById('modal-production-cost').value=0;document.getElementById('modal-labour-charge').value=0;document.getElementById('modal-remarks').value='';document.getElementById('modal-audit-section').hidden=true;document.getElementById('modal-audit-grid').innerHTML='';document.getElementById('modal-consumption-rows').innerHTML='';const r=await axios.get(endpoint+'/next-number');document.getElementById('modal-production-no').value=r.data.data.production_no;consumptionLine({},false)}
+async function loadProductionEditorForEdit(id){activeId=id;showProductionEditor('edit');const r=await axios.get(`${endpoint}/${id}`);const x=r.data.data;document.getElementById('modal-status-label').innerHTML=badge(x.status);document.getElementById('modal-reference-label').textContent=x.posted_at?`Posted: ${x.posted_at}`:x.cancelled_at?`Cancelled: ${x.cancelled_at}`:'';document.getElementById('modal-production-no').value=x.production_no;document.getElementById('modal-production-date').value=x.production_date;document.getElementById('modal-bom-id').value=x.bom_id;document.getElementById('modal-produced-item-id').value=x.produced_item_id;document.getElementById('modal-team-id').value=x.team_id;document.getElementById('modal-fg-location-id').value=x.fg_location_id;document.getElementById('modal-produced-qty').value=x.produced_qty;document.getElementById('modal-production-cost').value=x.production_cost;document.getElementById('modal-labour-charge').value=x.labour_charge||0;document.getElementById('modal-remarks').value=x.remarks||'';document.getElementById('modal-audit-section').hidden=false;document.getElementById('modal-audit-grid').innerHTML=auditSection(x);document.getElementById('modal-consumption-rows').innerHTML='';(x.consumptions||[]).forEach(row=>consumptionLine(row,false));if(!(x.consumptions||[]).length)consumptionLine({},false)}
+async function openProductionModal(mode,id=null){if(mode==='create'){await loadProductionEditorForCreate();return}if(mode==='edit'){await loadProductionEditorForEdit(id);return}hideProductionEditor();activeMode=mode;activeId=id;let readonly=mode==='view';window.ErpModal.open({title:mode==='create'?'Add Production':mode==='edit'?'Edit Production':'Display Production',subtitle:'Production master and material consumption rows',size:'xl',body:productionModalBody(readonly),footer:readonly?'<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button>':'<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-action="save-production"><i data-lucide="save"></i> Save Draft</button>'});const r=await axios.get(`${endpoint}/${id}`);const x=r.data.data;readonly=mode==='view'||x.status!=='Draft';document.getElementById('modal-status-label').innerHTML=badge(x.status);document.getElementById('modal-reference-label').textContent=x.posted_at?`Posted: ${x.posted_at}`:x.cancelled_at?`Cancelled: ${x.cancelled_at}`:'';document.getElementById('modal-production-no').value=x.production_no;document.getElementById('modal-production-date').value=x.production_date;document.getElementById('modal-bom-id').value=x.bom_id;document.getElementById('modal-produced-item-id').value=x.produced_item_id;document.getElementById('modal-team-id').value=x.team_id;document.getElementById('modal-fg-location-id').value=x.fg_location_id;document.getElementById('modal-produced-qty').value=x.produced_qty;document.getElementById('modal-production-cost').value=x.production_cost;document.getElementById('modal-labour-charge').value=x.labour_charge||0;document.getElementById('modal-remarks').value=x.remarks||'';document.getElementById('modal-audit-section').hidden=false;document.getElementById('modal-audit-grid').innerHTML=auditSection(x);document.getElementById('modal-consumption-rows').innerHTML='';(x.consumptions||[]).forEach(row=>consumptionLine(row,readonly));if(readonly){document.querySelectorAll('#modal-production-date,#modal-bom-id,#modal-produced-item-id,#modal-team-id,#modal-fg-location-id,#modal-produced-qty,#modal-production-cost,#modal-labour-charge,#modal-remarks').forEach(el=>el.disabled=true)}}
 function modalPayload(){return{production_no:document.getElementById('modal-production-no').value,production_date:document.getElementById('modal-production-date').value,bom_id:document.getElementById('modal-bom-id').value,produced_item_id:document.getElementById('modal-produced-item-id').value,team_id:document.getElementById('modal-team-id').value,fg_location_id:document.getElementById('modal-fg-location-id').value,produced_qty:document.getElementById('modal-produced-qty').value,production_cost:document.getElementById('modal-production-cost').value,labour_charge:document.getElementById('modal-labour-charge').value,remarks:document.getElementById('modal-remarks').value,consumptions:[...document.querySelectorAll('#modal-consumption-rows tr')].map(tr=>({item_id:tr.querySelector('[name=item_id]').value,uom_id:tr.querySelector('[name=uom_id]').value,location_id:tr.querySelector('[name=location_id]').value,required_qty:tr.querySelector('[name=required_qty]').value,consumed_qty:tr.querySelector('[name=consumed_qty]').value,wastage_qty:tr.querySelector('[name=wastage_qty]').value,remarks:tr.querySelector('[name=remarks]').value}))}}
-async function saveProduction(){const box=document.getElementById('modal-errors');box.hidden=true;try{if(activeMode==='edit')await axios.put(`${endpoint}/${activeId}`,modalPayload());else await axios.post(endpoint,modalPayload());window.ErpApi?.clearLookupCache?.();window.ErpModal.close();await load(page);window.ErpToast?.show('Production saved.')}catch(error){box.textContent=error.normalizedMessage||'Unable to save production.';box.hidden=false}}
+async function saveProduction(){const box=document.getElementById('modal-errors');box.hidden=true;try{if(activeMode==='edit')await axios.put(`${endpoint}/${activeId}`,modalPayload());else await axios.post(endpoint,modalPayload());window.ErpApi?.clearLookupCache?.();hideProductionEditor();window.ErpModal.close?.();await load(page);window.ErpToast?.show('Production saved.')}catch(error){box.textContent=error.normalizedMessage||'Unable to save production.';box.hidden=false}}
 function setProcessing(button,label='Processing'){posting=true;button.disabled=true;button.innerHTML=`<i data-lucide="loader"></i> ${label}`;lucide?.createIcons()}
 function clearProcessing(){posting=false}
 function confirmPost(id){window.ErpModal.open({title:'Post Production',subtitle:'Posting updates Fresh stock, output, wastage stock-out, and team ledger.',size:'sm',body:'<p>Post this production entry?</p><div id="post-errors" class="form-errors" hidden></div>',footer:`<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-confirm-post="${id}"><i data-lucide="check-circle"></i> Post</button>`})}
 function confirmCancel(id){window.ErpModal.open({title:'Cancel Production',subtitle:'Cancellation reverses posted production stock movement.',size:'md',body:'<div class="field"><i data-lucide="message-square"></i><label>Cancellation Reason</label><input id="cancel-reason" type="text"></div><div id="cancel-errors" class="form-errors" hidden></div>',footer:`<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button><button class="btn-erp btn-danger" type="button" data-confirm-cancel="${id}"><i data-lucide="ban"></i> Cancel Production</button>`})}
 function confirmDelete(id){window.ErpModal.open({title:'Delete Production',subtitle:'Only draft production entries can be deleted.',size:'sm',body:'<p>Delete this production entry?</p>',footer:`<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-danger" type="button" data-confirm-delete="${id}"><i data-lucide="trash-2"></i> Delete</button>`})}
 function csvExport(){const active=columnOptions.filter(([key])=>visibleColumns.includes(key));const map={production_no:x=>x.production_no,date:x=>x.production_date,bom:x=>x.bom_no||x.bom_name,team:x=>x.team_name,item:x=>x.produced_item_name,qty:x=>x.produced_qty,status:x=>x.status};const csv=[active.map(([,label])=>`"${label}"`).join(','),...productionRows.map(row=>active.map(([key])=>`"${String(map[key](row)??'').replaceAll('"','""')}"`).join(','))].join('\n');const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='production.csv';a.click();URL.revokeObjectURL(a.href)}
-document.addEventListener('DOMContentLoaded',()=>{window.perPage=document.getElementById('per_page');window.filterStatus=document.getElementById('filter-status');window.filterDateFrom=document.getElementById('filter-date-from');window.filterDateTo=document.getElementById('filter-date-to');window.filterBom=document.getElementById('filter-bom');window.filterTeam=document.getElementById('filter-team');window.filterProducedItem=document.getElementById('filter-produced-item');window.colProductionNo=document.getElementById('col-production-no');window.colDate=document.getElementById('col-date');window.colBom=document.getElementById('col-bom');window.colTeam=document.getElementById('col-team');window.colProducedItem=document.getElementById('col-produced-item');window.colQtyMin=document.getElementById('col-qty-min');window.colStatus=document.getElementById('col-status');window.columnPickerMenu=document.getElementById('column-picker-menu');window.pageStatus=document.getElementById('page-status');window.pageLinks=document.getElementById('page-links');boot();document.querySelector('[data-action="new-production"]').onclick=()=>openProductionModal('create');document.querySelector('[data-action="reload-production"]').onclick=()=>load(page);document.querySelector('[data-action="apply-filters"]').onclick=()=>load(1);document.querySelector('[data-action="reset-filters"]').onclick=resetFilters;document.querySelector('[data-action="toggle-filter-row"]').onclick=toggleFilterRow;document.querySelector('[data-action="clear-search"]').onclick=()=>{search.value='';load(1)};document.querySelector('[data-action="prev-page"]').onclick=()=>page>1&&load(page-1);document.querySelector('[data-action="next-page"]').onclick=()=>page<last&&load(page+1);pageLinks.addEventListener('click',e=>{const target=e.target.closest('[data-page]');if(target)load(Number(target.dataset.page))});document.querySelector('[data-action="export"]').onclick=csvExport;document.querySelector('[data-action="print"]').onclick=()=>window.print();document.querySelector('[data-action="toggle-columns"]').onclick=function(){const picker=this.closest('.column-picker');picker.classList.toggle('is-open');this.setAttribute('aria-expanded',picker.classList.contains('is-open')?'true':'false')};columnPickerMenu.addEventListener('change',e=>{const cb=e.target.closest('input[type="checkbox"]');if(cb)updateColumnVisibility(cb.value,cb.checked)});document.addEventListener('change',async e=>{if(e.target?.id==='modal-bom-id')await applyBomSelection()});document.addEventListener('click',async e=>{if(!e.target.closest('.column-picker')){document.querySelector('.column-picker')?.classList.remove('is-open');document.querySelector('[data-action="toggle-columns"]')?.setAttribute('aria-expanded','false')}if(e.target.closest('[data-action="save-production"]'))await saveProduction();if(e.target.closest('[data-action="load-bom-lines"]'))await loadBomLines();const postButton=e.target.closest('[data-confirm-post]');const post=postButton?.dataset.confirmPost;if(post&&!posting){try{setProcessing(postButton,'Posting');
+document.addEventListener('DOMContentLoaded',()=>{window.perPage=document.getElementById('per_page');window.filterStatus=document.getElementById('filter-status');window.filterDateFrom=document.getElementById('filter-date-from');window.filterDateTo=document.getElementById('filter-date-to');window.filterBom=document.getElementById('filter-bom');window.filterTeam=document.getElementById('filter-team');window.filterProducedItem=document.getElementById('filter-produced-item');window.colProductionNo=document.getElementById('col-production-no');window.colDate=document.getElementById('col-date');window.colBom=document.getElementById('col-bom');window.colTeam=document.getElementById('col-team');window.colProducedItem=document.getElementById('col-produced-item');window.colQtyMin=document.getElementById('col-qty-min');window.colStatus=document.getElementById('col-status');window.columnPickerMenu=document.getElementById('column-picker-menu');window.pageStatus=document.getElementById('page-status');window.pageLinks=document.getElementById('page-links');boot();document.querySelector('[data-action="new-production"]').onclick=()=>openProductionModal('create');document.querySelector('[data-action="close-production-form"]').onclick=()=>hideProductionEditor();document.querySelector('[data-action="reload-production"]').onclick=()=>load(page);document.querySelector('[data-action="apply-filters"]').onclick=()=>load(1);document.querySelector('[data-action="reset-filters"]').onclick=resetFilters;document.querySelector('[data-action="toggle-filter-row"]').onclick=toggleFilterRow;document.querySelector('[data-action="clear-search"]').onclick=()=>{search.value='';load(1)};document.querySelector('[data-action="prev-page"]').onclick=()=>page>1&&load(page-1);document.querySelector('[data-action="next-page"]').onclick=()=>page<last&&load(page+1);pageLinks.addEventListener('click',e=>{const target=e.target.closest('[data-page]');if(target)load(Number(target.dataset.page))});document.querySelector('[data-action="export"]').onclick=csvExport;document.querySelector('[data-action="print"]').onclick=()=>window.print();document.querySelector('[data-action="toggle-columns"]').onclick=function(){const picker=this.closest('.column-picker');picker.classList.toggle('is-open');this.setAttribute('aria-expanded',picker.classList.contains('is-open')?'true':'false')};columnPickerMenu.addEventListener('change',e=>{const cb=e.target.closest('input[type="checkbox"]');if(cb)updateColumnVisibility(cb.value,cb.checked)});document.addEventListener('change',async e=>{if(e.target?.id==='modal-bom-id')await applyBomSelection()});document.addEventListener('click',async e=>{if(!e.target.closest('.column-picker')){document.querySelector('.column-picker')?.classList.remove('is-open');document.querySelector('[data-action="toggle-columns"]')?.setAttribute('aria-expanded','false')}if(e.target.closest('[data-action="save-production"]'))await saveProduction();if(e.target.closest('[data-action="load-bom-lines"]'))await loadBomLines();const postButton=e.target.closest('[data-confirm-post]');const post=postButton?.dataset.confirmPost;if(post&&!posting){try{setProcessing(postButton,'Posting');
 await axios.post(`${endpoint}/${post}/post`);
 window.ErpModal.close();await load(page);window.ErpToast?.show('Production posted.')}catch(error){const box=document.getElementById('post-errors');if(box){box.textContent=error.normalizedMessage||'Post failed.';box.hidden=false}else window.ErpToast?.show(error.normalizedMessage||'Post failed.','danger')}finally{clearProcessing()}}const cancelButton=e.target.closest('[data-confirm-cancel]');const cancel=cancelButton?.dataset.confirmCancel;if(cancel&&!posting){try{setProcessing(cancelButton,'Cancelling');await axios.post(`${endpoint}/${cancel}/cancel`,{reason:document.getElementById('cancel-reason')?.value||''});window.ErpModal.close();await load(page);window.ErpToast?.show('Production cancelled.')}catch(error){const box=document.getElementById('cancel-errors');if(box){box.textContent=error.normalizedMessage||'Cancel failed.';box.hidden=false}else window.ErpToast?.show(error.normalizedMessage||'Cancel failed.','danger')}finally{clearProcessing()}}const deleteButton=e.target.closest('[data-confirm-delete]');const del=deleteButton?.dataset.confirmDelete;if(del&&!posting){try{setProcessing(deleteButton,'Deleting');await axios.delete(`${endpoint}/${del}`);window.ErpModal.close();await load(page);window.ErpToast?.show('Production deleted.')}catch(error){window.ErpToast?.show(error.normalizedMessage||'Delete failed.','danger')}finally{clearProcessing()}}});document.querySelectorAll('[data-sort]').forEach(button=>button.addEventListener('click',function(){if(sortBy===this.dataset.sort)sortDirection=sortDirection==='asc'?'desc':'asc';else{sortBy=this.dataset.sort;sortDirection='asc'}load(1)}));[perPage,filterStatus,filterDateFrom,filterDateTo,filterBom,filterTeam,filterProducedItem,colDate,colStatus].forEach(el=>el.addEventListener('change',()=>load(1)));[search,colProductionNo,colBom,colTeam,colProducedItem,colQtyMin].forEach(el=>el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>load(1),300)}));rows.addEventListener('click',async e=>{const view=e.target.closest('[data-view]')?.dataset.view;const edit=e.target.closest('[data-edit]')?.dataset.edit;const post=e.target.closest('[data-post]')?.dataset.post;const cancel=e.target.closest('[data-cancel]')?.dataset.cancel;const del=e.target.closest('[data-delete]')?.dataset.delete;if(view)await openProductionModal('view',view);if(edit)await openProductionModal('edit',edit);if(post)confirmPost(post);if(cancel)confirmCancel(cancel);if(del)confirmDelete(del)});});
 </script>

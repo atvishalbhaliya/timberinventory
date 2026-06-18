@@ -96,6 +96,7 @@ const routePermissions = {
     '/stock-ledger': 'stock-ledger.view',
     '/stock-summary': 'stock-summary.view',
     '/stock-verification': 'stock-verification.view',
+    '/finished-product-stock-summary': 'overall-stock-summary.view',
     '/wastage': 'wastage.view',
     '/wastage-adjustment': 'wastage.manage',
     '/wastage-summary': 'wastage.view',
@@ -159,8 +160,8 @@ const enforceRoutePermission = async () => {
 };
 
 const activePath = (path) => window.location.pathname === path || (window.location.pathname === '/' && path === '/dashboard');
-const oldNavCacheKeys = ['timber-sidebar-navigation-v1', 'timber-sidebar-navigation-v2', 'timber-sidebar-navigation-v3', 'timber-sidebar-navigation-v4'];
-const navCacheKey = 'timber-sidebar-navigation-v5';
+const oldNavCacheKeys = ['timber-sidebar-navigation-v1', 'timber-sidebar-navigation-v2', 'timber-sidebar-navigation-v3', 'timber-sidebar-navigation-v4', 'timber-sidebar-navigation-v5'];
+const navCacheKey = 'timber-sidebar-navigation-v6';
 const navCacheTtlMs = 5 * 60 * 1000;
 let lastRenderedNav = '';
 

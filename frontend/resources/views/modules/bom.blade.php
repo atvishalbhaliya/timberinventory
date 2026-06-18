@@ -4,7 +4,7 @@
 
 @section('content')
     <section class="erp-card bom-list-card">
-        <div class="bom-card-head">
+        <div class="bom-card-head" id="bom-card-head">
             <div>
                 <h1>BOM Management</h1>
                 <p class="text-muted">Manage versioned material recipes for production.</p>
@@ -15,75 +15,91 @@
             </div>
         </div>
 
-        <div class="bom-filter-row" id="bom-filter-row" hidden>
-            <div class="bom-filter-group">
-                <label class="bom-filter-field">
-                    <span>Finished Model</span>
-                    <select id="filter-model"></select>
-                </label>
-                <label class="bom-filter-field">
-                    <span>Status</span>
-                    <select id="filter-status"><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
-                </label>
-                <div class="bom-filter-actions">
-                    <button class="btn-erp btn-primary btn-filter" type="button" data-action="apply-filters"><i data-lucide="filter"></i> Apply</button>
-                    <button class="btn-erp btn-filter btn-filter-secondary" type="button" data-action="reset-filters"><i data-lucide="filter-x"></i> Reset</button>
+        <section class="bom-editor-card" id="bom-editor-card" hidden>
+            <div class="bom-editor-head">
+                <div>
+                    <h2 id="bom-editor-title">Add BOM</h2>
+                    <p class="text-muted" id="bom-editor-subtitle">Create or update a bill of materials without leaving the page.</p>
+                </div>
+                <div class="module-actions">
+                    <button class="btn-erp" type="button" data-action="close-bom-form"><i data-lucide="x"></i> Cancel</button>
+                    <button class="btn-erp btn-primary" type="button" data-action="save-bom"><i data-lucide="save"></i> Save</button>
                 </div>
             </div>
-        </div>
+            <div id="bom-editor-body"></div>
+        </section>
 
-        <div class="table-toolbar bom-table-toolbar">
-            <div class="data-grid-controls">
-                <select id="per_page"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select>
-                <div class="column-picker">
-                    <button class="btn-erp btn-column-picker" type="button" data-action="toggle-columns" aria-expanded="false"><i data-lucide="columns-3"></i> Columns</button>
-                    <div class="column-picker-menu" id="column-picker-menu"></div>
+        <div id="bom-list-content">
+            <div class="bom-filter-row" id="bom-filter-row" hidden>
+                <div class="bom-filter-group">
+                    <label class="bom-filter-field">
+                        <span>Finished Model</span>
+                        <select id="filter-model"></select>
+                    </label>
+                    <label class="bom-filter-field">
+                        <span>Status</span>
+                        <select id="filter-status"><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
+                    </label>
+                    <div class="bom-filter-actions">
+                        <button class="btn-erp btn-primary btn-filter" type="button" data-action="apply-filters"><i data-lucide="filter"></i> Apply</button>
+                        <button class="btn-erp btn-filter btn-filter-secondary" type="button" data-action="reset-filters"><i data-lucide="filter-x"></i> Reset</button>
+                    </div>
                 </div>
-                <button class="btn-erp btn-filter-toggle" type="button" data-action="toggle-filter-row" aria-controls="bom-filter-row bom-filter-head" aria-pressed="false" title="Show filters"><i data-lucide="filter"></i> Filters</button>
             </div>
-            <div class="module-search">
-                <i data-lucide="search"></i>
-                <input id="search" type="search" placeholder="Search BOM, model, version">
-                <button class="search-clear" data-action="clear-search" type="button" title="Clear search"><i data-lucide="x"></i></button>
-            </div>
-        </div>
 
-        <div class="table-responsive bom-data-table-wrap">
-            <table class="table bom-data-table">
-                <thead>
-                    <tr>
-                        <th data-col="bom_no"><button class="sort-head" data-sort="bom_no" type="button">BOM No <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="bom_name"><button class="sort-head" data-sort="bom_name" type="button">Name <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="model"><button class="sort-head" data-sort="model_name" type="button">Finished Model <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="version"><button class="sort-head" data-sort="version_no" type="button">Version <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="status"><button class="sort-head" data-sort="status" type="button">Status <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="materials" class="text-end"><button class="sort-head sort-end" data-sort="materials_count" type="button">Materials <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th class="text-end action-col">Actions</th>
-                    </tr>
-                    <tr class="bom-filter-head" id="bom-filter-head" hidden>
-                        <th data-col="bom_no"><input id="col-bom-no" type="search" placeholder="Search"></th>
-                        <th data-col="bom_name"><input id="col-bom-name" type="search" placeholder="Search"></th>
-                        <th data-col="model"><select id="col-model"></select></th>
-                        <th data-col="version"><input id="col-version" type="search" placeholder="Search"></th>
-                        <th data-col="status"><select id="col-status"><option value="">All</option><option>Active</option><option>Inactive</option></select></th>
-                        <th data-col="materials"><input id="col-materials-min" type="number" min="0" step="1" placeholder="Min"></th>
-                        <th class="action-col"></th>
-                    </tr>
-                </thead>
-                <tbody id="rows"><tr class="skeleton-row"><td colspan="7"></td></tr></tbody>
-            </table>
-        </div>
-
-        <div class="pagination-row">
-            <div class="pager-actions">
-                <button class="btn-erp btn-page-nav" data-action="prev-page" title="Previous"><i data-lucide="chevron-left"></i></button>
-                <span class="page-number-list" id="page-links"></span>
-                <button class="btn-erp btn-page-nav" data-action="next-page" title="Next"><i data-lucide="chevron-right"></i></button>
-                <span id="page-status" class="text-muted page-record-status"></span>
+            <div class="table-toolbar bom-table-toolbar">
+                <div class="data-grid-controls">
+                    <select id="per_page"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select>
+                    <div class="column-picker">
+                        <button class="btn-erp btn-column-picker" type="button" data-action="toggle-columns" aria-expanded="false"><i data-lucide="columns-3"></i> Columns</button>
+                        <div class="column-picker-menu" id="column-picker-menu"></div>
+                    </div>
+                    <button class="btn-erp btn-filter-toggle" type="button" data-action="toggle-filter-row" aria-controls="bom-filter-row bom-filter-head" aria-pressed="false" title="Show filters"><i data-lucide="filter"></i> Filters</button>
+                </div>
+                <div class="module-search">
+                    <i data-lucide="search"></i>
+                    <input id="search" type="search" placeholder="Search BOM, model, version">
+                    <button class="search-clear" data-action="clear-search" type="button" title="Clear search"><i data-lucide="x"></i></button>
+                </div>
             </div>
-            <div class="module-actions">
-                <button class="btn-erp" data-action="export"><i data-lucide="file-spreadsheet"></i> Export CSV</button>
-                <button class="btn-erp" data-action="print"><i data-lucide="printer"></i> Print</button>
+
+            <div class="table-responsive bom-data-table-wrap">
+                <table class="table bom-data-table">
+                    <thead>
+                        <tr>
+                            <th data-col="bom_no"><button class="sort-head" data-sort="bom_no" type="button">BOM No <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="bom_name"><button class="sort-head" data-sort="bom_name" type="button">Name <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="model"><button class="sort-head" data-sort="model_name" type="button">Finished Model <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="version"><button class="sort-head" data-sort="version_no" type="button">Version <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="status"><button class="sort-head" data-sort="status" type="button">Status <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="materials" class="text-end"><button class="sort-head sort-end" data-sort="materials_count" type="button">Materials <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th class="text-end action-col">Actions</th>
+                        </tr>
+                        <tr class="bom-filter-head" id="bom-filter-head" hidden>
+                            <th data-col="bom_no"><input id="col-bom-no" type="search" placeholder="Search"></th>
+                            <th data-col="bom_name"><input id="col-bom-name" type="search" placeholder="Search"></th>
+                            <th data-col="model"><select id="col-model"></select></th>
+                            <th data-col="version"><input id="col-version" type="search" placeholder="Search"></th>
+                            <th data-col="status"><select id="col-status"><option value="">All</option><option>Active</option><option>Inactive</option></select></th>
+                            <th data-col="materials"><input id="col-materials-min" type="number" min="0" step="1" placeholder="Min"></th>
+                            <th class="action-col"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows"><tr class="skeleton-row"><td colspan="7"></td></tr></tbody>
+                </table>
+            </div>
+
+            <div class="pagination-row">
+                <div class="pager-actions">
+                    <button class="btn-erp btn-page-nav" data-action="prev-page" title="Previous"><i data-lucide="chevron-left"></i></button>
+                    <span class="page-number-list" id="page-links"></span>
+                    <button class="btn-erp btn-page-nav" data-action="next-page" title="Next"><i data-lucide="chevron-right"></i></button>
+                    <span id="page-status" class="text-muted page-record-status"></span>
+                </div>
+                <div class="module-actions">
+                    <button class="btn-erp" data-action="export"><i data-lucide="file-spreadsheet"></i> Export CSV</button>
+                    <button class="btn-erp" data-action="print"><i data-lucide="printer"></i> Print</button>
+                </div>
             </div>
         </div>
     </section>
@@ -95,6 +111,10 @@
     .bom-card-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 20px 16px; border-bottom:1px solid var(--border); background:linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 48%, var(--surface)), var(--surface)); }
     .bom-card-head h1 { margin:0; font-size:22px; line-height:1.2; font-weight:800; }
     .bom-card-head p { margin:5px 0 0; }
+    .bom-editor-card { display:grid; gap:16px; margin:0 0 16px; padding:20px; border-bottom:1px solid var(--border); background:var(--surface); box-shadow:0 8px 22px rgba(15,23,42,.08); }
+    .bom-editor-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+    .bom-editor-head h2 { margin:0; font-size:18px; font-weight:800; }
+    .bom-editor-head p { margin:4px 0 0; }
     .bom-filter-row { display:flex; align-items:flex-end; justify-content:center; gap:10px; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface); }
     .bom-filter-group { display:flex; align-items:flex-end; justify-content:center; gap:10px; flex:1 1 auto; flex-wrap:wrap; max-width:1320px; }
     .bom-filter-field { display:grid; gap:5px; flex:1 1 170px; min-width:150px; max-width:220px; margin:0; }
@@ -196,6 +216,10 @@ function renderColumnPicker(){columnPickerMenu.innerHTML=columnOptions.map(([key
 function applyColumnVisibility(){const visible=new Set(visibleColumns);document.querySelectorAll('.bom-data-table [data-col]').forEach(cell=>cell.classList.toggle('is-hidden-column',!visible.has(cell.dataset.col)))}
 function updateColumnVisibility(column,checked){visibleColumns=checked?[...new Set([...visibleColumns,column])]:visibleColumns.filter(item=>item!==column);localStorage.setItem(columnStorageKey,JSON.stringify(visibleColumns));applyColumnVisibility()}
 function toggleFilterRow(){const row=document.getElementById('bom-filter-row'),head=document.getElementById('bom-filter-head'),button=document.querySelector('[data-action="toggle-filter-row"]'),open=row.hidden;row.hidden=!open;head.hidden=!open;button.classList.toggle('is-active',open);button.setAttribute('aria-pressed',open?'true':'false');button.title=open?'Hide filters':'Show filters'}
+function showBomEditor(mode){activeMode=mode;const editor=document.getElementById('bom-editor-card');const head=document.getElementById('bom-card-head');const list=document.getElementById('bom-list-content');document.getElementById('bom-editor-title').textContent=mode==='create'?'Add BOM':'Edit BOM';document.getElementById('bom-editor-subtitle').textContent=mode==='create'?'Create a new bill of materials without leaving the page.':'Update the bill of materials and keep the list hidden while editing.';document.getElementById('bom-editor-body').innerHTML=modalBody(false);if(head)head.hidden=true;if(list)list.hidden=true;editor.hidden=false;editor.scrollIntoView({behavior:'smooth',block:'start'});lucide?.createIcons()}
+function hideBomEditor(){const head=document.getElementById('bom-card-head');const list=document.getElementById('bom-list-content');document.getElementById('bom-editor-card').hidden=true;document.getElementById('bom-editor-body').innerHTML='';if(head)head.hidden=false;if(list)list.hidden=false;activeId=null;activeMode='create'}
+async function loadBomEditorForCreate(){showBomEditor('create');document.getElementById('modal-status').value='Active';document.getElementById('modal-version').value='';const r=await axios.get(endpoint+'/next-number');document.getElementById('modal-bom-no').value=r.data.data.bom_no;window.materialRows=document.getElementById('modal-material-rows');line({},false)}
+async function loadBomEditorForEdit(id){activeId=id;showBomEditor('edit');window.materialRows=document.getElementById('modal-material-rows');const r=await axios.get(`${endpoint}/${id}`);const x=r.data.data;document.getElementById('modal-bom-no').value=x.bom_no;document.getElementById('modal-bom-name').value=x.bom_name;document.getElementById('modal-model').value=x.finished_item_id||'';document.getElementById('modal-version').value=x.version_no;document.getElementById('modal-status').value=x.status;document.getElementById('modal-note').value=x.revision_note||'';(x.materials||[]).forEach(row=>line(row,false));if(!(x.materials||[]).length)line({},false)}
 function storeState(){sessionStorage.setItem('bom.search',search.value);sessionStorage.setItem('bom.status',filterStatus.value);sessionStorage.setItem('bom.model',filterModel.value);sessionStorage.setItem('bom.perPage',perPage.value);sessionStorage.setItem('bom.sortBy',sortBy);sessionStorage.setItem('bom.sortDirection',sortDirection);['col-bom-no','col-bom-name','col-model','col-version','col-status','col-materials-min'].forEach(id=>sessionStorage.setItem(`bom.${id}`,document.getElementById(id).value))}
 function restoreState(){search.value=sessionStorage.getItem('bom.search')||'';filterStatus.value=sessionStorage.getItem('bom.status')||'';filterModel.value=sessionStorage.getItem('bom.model')||'';perPage.value=sessionStorage.getItem('bom.perPage')||'10';['col-bom-no','col-bom-name','col-model','col-version','col-status','col-materials-min'].forEach(id=>{const el=document.getElementById(id);el.value=sessionStorage.getItem(`bom.${id}`)||''})}
 function resetFilters(){[search,filterStatus,filterModel,colBomNo,colBomName,colModel,colVersion,colStatus,colMaterialsMin].forEach(el=>el.value='');perPage.value='10';sortBy='bom_no';sortDirection='asc';load(1)}
@@ -204,11 +228,11 @@ function setLineUom(tr,force=false){const itemId=tr.querySelector('[name=item_id
 async function suggestVersionForModel(modelId){const version=document.getElementById('modal-version');if(!modelId||activeMode!=='create')return;if(version.dataset.touched==='1')return;try{const r=await axios.get(endpoint,{params:{per_page:100,finished_item_id:modelId}}),rows=r.data.data.data||[];let max=0;rows.forEach(row=>{const m=String(row.version_no||'').match(/^V(\d+)$/i);if(m)max=Math.max(max,Number(m[1]))});version.value=`V${max+1}`}catch{version.value=version.value||'V1'}}
 function line(row={},readonly=false){const tr=document.createElement('tr');tr.innerHTML=`<td><select class="line-select" name="item_id" required ${readonly?'disabled':''}>${opt(items,'item_id','item_name','Item')}</select></td><td><select class="line-select" name="uom_id" required ${readonly?'disabled':''}>${opt(uoms,'uom_id','uom_name','UOM')}</select></td><td><input class="line-input line-number" name="required_qty" type="number" step="0.001" min="0.001" value="${row.required_qty??1}" required ${readonly?'disabled':''}></td><td><input class="line-input line-number" name="wastage_percent" type="number" step="0.01" min="0" max="100" value="${row.wastage_percent??0}" ${readonly?'disabled':''}></td><td><input class="line-input" name="remarks" value="${esc(row.remarks)}" ${readonly?'disabled':''}></td><td class="text-end">${readonly?'':`<button class="icon-btn action-delete" type="button" data-remove-line title="Remove"><i data-lucide="trash-2"></i></button>`}</td>`;materialRows.appendChild(tr);tr.querySelector('[name=item_id]').value=row.item_id||'';tr.querySelector('[name=uom_id]').value=row.uom_id||uomForItem(row.item_id)||'';if(!readonly)tr.querySelector('[name=item_id]').addEventListener('change',()=>setLineUom(tr,true));lucide?.createIcons()}
 function modalBody(readonly=false){return`<div class="bom-modal-body"><div class="bom-form-grid"><div class="field"><i data-lucide="hash"></i><label>BOM No</label><input id="modal-bom-no" type="text" ${readonly?'disabled':'readonly'}></div><div class="field"><i data-lucide="file-text"></i><label>BOM Name *</label><input id="modal-bom-name" type="text" ${readonly?'disabled':''}></div><div class="field"><i data-lucide="box"></i><label>Finished Model *</label><select id="modal-model" ${readonly?'disabled':''}>${opt(models,'item_id','item_name','Select finished product')}</select></div><div class="field"><i data-lucide="git-branch"></i><label>Version *</label><input id="modal-version" type="text" value="V1" ${readonly?'disabled':''}></div><div class="field"><i data-lucide="activity"></i><label>Status</label><select id="modal-status" ${readonly?'disabled':''}><option>Active</option><option>Inactive</option></select></div><div class="field field-wide"><i data-lucide="message-square"></i><label>Revision Note</label><input id="modal-note" type="text" ${readonly?'disabled':''}></div></div><div class="table-toolbar" style="padding:0;"><h3 class="erp-card-title">Materials</h3>${readonly?'':'<button class="btn-erp" type="button" data-action="add-line"><i data-lucide="plus"></i> Add Line</button>'}</div><div class="table-responsive bom-line-wrap"><table class="table"><thead><tr><th>Item</th><th>UOM</th><th class="text-end">Required Qty</th><th class="text-end">Wastage %</th><th>Remarks</th><th class="text-end">Actions</th></tr></thead><tbody id="modal-material-rows"></tbody></table></div><div id="modal-errors" class="form-errors" hidden></div></div>`}
-async function openBomModal(mode,id=null){activeMode=mode;activeId=id;const readonly=mode==='view';window.ErpModal.open({title:mode==='create'?'Add BOM':mode==='edit'?'Edit BOM':'Display BOM',subtitle:'BOM master and material rows',size:'xl',body:modalBody(readonly),footer:readonly?'<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button>':'<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-action="save-bom"><i data-lucide="save"></i> Save</button>'});window.materialRows=document.getElementById('modal-material-rows');const model=document.getElementById('modal-model'),version=document.getElementById('modal-version');if(!readonly){model.addEventListener('change',()=>suggestVersionForModel(model.value));version.addEventListener('input',()=>version.dataset.touched='1')}if(mode==='create'){version.value='';document.getElementById('modal-status').value='Active';const r=await axios.get(endpoint+'/next-number');document.getElementById('modal-bom-no').value=r.data.data.bom_no;line({},false);return}const r=await axios.get(`${endpoint}/${id}`);const x=r.data.data;document.getElementById('modal-bom-no').value=x.bom_no;document.getElementById('modal-bom-name').value=x.bom_name;model.value=x.finished_item_id||'';version.value=x.version_no;document.getElementById('modal-status').value=x.status;document.getElementById('modal-note').value=x.revision_note||'';(x.materials||[]).forEach(row=>line(row,readonly));if(!(x.materials||[]).length)line({},readonly)}
+async function openBomModal(mode,id=null){if(mode==='create'){await loadBomEditorForCreate();return}if(mode==='edit'){await loadBomEditorForEdit(id);return}hideBomEditor();activeMode=mode;activeId=id;const readonly=mode==='view';window.ErpModal.open({title:mode==='create'?'Add BOM':mode==='edit'?'Edit BOM':'Display BOM',subtitle:'BOM master and material rows',size:'xl',body:modalBody(readonly),footer:readonly?'<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button>':'<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-action="save-bom"><i data-lucide="save"></i> Save</button>'});window.materialRows=document.getElementById('modal-material-rows');const model=document.getElementById('modal-model'),version=document.getElementById('modal-version');if(!readonly){model.addEventListener('change',()=>suggestVersionForModel(model.value));version.addEventListener('input',()=>version.dataset.touched='1')}const r=await axios.get(`${endpoint}/${id}`);const x=r.data.data;document.getElementById('modal-bom-no').value=x.bom_no;document.getElementById('modal-bom-name').value=x.bom_name;model.value=x.finished_item_id||'';version.value=x.version_no;document.getElementById('modal-status').value=x.status;document.getElementById('modal-note').value=x.revision_note||'';(x.materials||[]).forEach(row=>line(row,readonly));if(!(x.materials||[]).length)line({},readonly)}
 function modalPayload(){return{bom_no:document.getElementById('modal-bom-no').value,bom_name:document.getElementById('modal-bom-name').value,finished_item_id:document.getElementById('modal-model').value,version_no:document.getElementById('modal-version').value,status:document.getElementById('modal-status').value,revision_note:document.getElementById('modal-note').value,materials:[...materialRows.querySelectorAll('tr')].map(tr=>({item_id:tr.querySelector('[name=item_id]').value,uom_id:tr.querySelector('[name=uom_id]').value,required_qty:tr.querySelector('[name=required_qty]').value,wastage_percent:tr.querySelector('[name=wastage_percent]').value,remarks:tr.querySelector('[name=remarks]').value}))}}
-async function saveBom(){const box=document.getElementById('modal-errors');box.hidden=true;try{if(activeMode==='edit')await axios.put(`${endpoint}/${activeId}`,modalPayload());else await axios.post(endpoint,modalPayload());window.ErpApi?.clearLookupCache?.();window.ErpModal.close();await load(page);window.ErpToast?.show('BOM saved.')}catch(error){box.textContent=error.normalizedMessage||'Unable to save BOM.';box.hidden=false}}
+async function saveBom(){const box=document.getElementById('modal-errors');box.hidden=true;try{if(activeMode==='edit')await axios.put(`${endpoint}/${activeId}`,modalPayload());else await axios.post(endpoint,modalPayload());window.ErpApi?.clearLookupCache?.();hideBomEditor();window.ErpModal.close?.();await load(page);window.ErpToast?.show('BOM saved.')}catch(error){box.textContent=error.normalizedMessage||'Unable to save BOM.';box.hidden=false}}
 async function deleteBom(id){window.ErpModal.open({title:'Delete BOM',subtitle:'BOM deletion is blocked when used by posted production.',size:'sm',body:'<p>Delete this BOM?</p>',footer:`<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-danger" type="button" data-confirm-delete="${id}"><i data-lucide="trash-2"></i> Delete</button>`})}
 function csvExport(){const valueMap={bom_no:x=>x.bom_no,bom_name:x=>x.bom_name,model:x=>x.model_name,version:x=>x.version_no,status:x=>x.status,materials:x=>x.materials_count||0};const active=columnOptions.filter(([key])=>visibleColumns.includes(key));const csv=[active.map(([,label])=>`"${label}"`).join(','),...boms.map(row=>active.map(([key])=>`"${String(valueMap[key](row)??'').replaceAll('"','""')}"`).join(','))].join('\n');const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='boms.csv';a.click();URL.revokeObjectURL(a.href)}
-document.addEventListener('DOMContentLoaded',()=>{window.perPage=document.getElementById('per_page');window.filterStatus=document.getElementById('filter-status');window.filterModel=document.getElementById('filter-model');window.colBomNo=document.getElementById('col-bom-no');window.colBomName=document.getElementById('col-bom-name');window.colModel=document.getElementById('col-model');window.colVersion=document.getElementById('col-version');window.colStatus=document.getElementById('col-status');window.colMaterialsMin=document.getElementById('col-materials-min');window.columnPickerMenu=document.getElementById('column-picker-menu');window.pageStatus=document.getElementById('page-status');window.pageLinks=document.getElementById('page-links');boot();document.querySelector('[data-action="new-bom"]').onclick=()=>openBomModal('create');document.querySelector('[data-action="reload-boms"]').onclick=()=>load(page);document.querySelector('[data-action="apply-filters"]').onclick=()=>load(1);document.querySelector('[data-action="reset-filters"]').onclick=resetFilters;document.querySelector('[data-action="toggle-filter-row"]').onclick=toggleFilterRow;document.querySelector('[data-action="clear-search"]').onclick=()=>{search.value='';load(1)};document.querySelector('[data-action="prev-page"]').onclick=()=>page>1&&load(page-1);document.querySelector('[data-action="next-page"]').onclick=()=>page<last&&load(page+1);pageLinks.addEventListener('click',e=>{const target=e.target.closest('[data-page]');if(target)load(Number(target.dataset.page))});document.querySelector('[data-action="export"]').onclick=csvExport;document.querySelector('[data-action="print"]').onclick=()=>window.print();document.querySelector('[data-action="toggle-columns"]').onclick=function(){const picker=this.closest('.column-picker');picker.classList.toggle('is-open');this.setAttribute('aria-expanded',picker.classList.contains('is-open')?'true':'false')};columnPickerMenu.addEventListener('change',e=>{const cb=e.target.closest('input[type="checkbox"]');if(cb)updateColumnVisibility(cb.value,cb.checked)});document.addEventListener('click',e=>{if(e.target.closest('.column-picker'))return;document.querySelector('.column-picker')?.classList.remove('is-open');document.querySelector('[data-action="toggle-columns"]')?.setAttribute('aria-expanded','false')});document.querySelectorAll('[data-sort]').forEach(button=>button.addEventListener('click',function(){if(sortBy===this.dataset.sort)sortDirection=sortDirection==='asc'?'desc':'asc';else{sortBy=this.dataset.sort;sortDirection='asc'}load(1)}));[perPage,filterStatus,filterModel,colModel,colStatus].forEach(el=>el.addEventListener('change',()=>load(1)));[search,colBomNo,colBomName,colVersion,colMaterialsMin].forEach(el=>el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>load(1),300)}));rows.addEventListener('click',async e=>{const view=e.target.closest('[data-view]')?.dataset.view;const edit=e.target.closest('[data-edit]')?.dataset.edit;const del=e.target.closest('[data-delete]')?.dataset.delete;if(view)await openBomModal('view',view);if(edit)await openBomModal('edit',edit);if(del)await deleteBom(del)});document.addEventListener('click',async e=>{if(e.target.closest('[data-action="save-bom"]'))await saveBom();if(e.target.closest('[data-action="add-line"]'))line({},false);if(e.target.closest('[data-remove-line]'))e.target.closest('tr').remove();const del=e.target.closest('[data-confirm-delete]')?.dataset.confirmDelete;if(del){try{await axios.delete(`${endpoint}/${del}`);window.ErpModal.close();await load(page);window.ErpToast?.show('BOM deleted.')}catch(error){window.ErpToast?.show(error.normalizedMessage||'Delete failed.','danger')}}});});
+document.addEventListener('DOMContentLoaded',()=>{window.perPage=document.getElementById('per_page');window.filterStatus=document.getElementById('filter-status');window.filterModel=document.getElementById('filter-model');window.colBomNo=document.getElementById('col-bom-no');window.colBomName=document.getElementById('col-bom-name');window.colModel=document.getElementById('col-model');window.colVersion=document.getElementById('col-version');window.colStatus=document.getElementById('col-status');window.colMaterialsMin=document.getElementById('col-materials-min');window.columnPickerMenu=document.getElementById('column-picker-menu');window.pageStatus=document.getElementById('page-status');window.pageLinks=document.getElementById('page-links');boot();document.querySelector('[data-action="new-bom"]').onclick=()=>openBomModal('create');document.querySelector('[data-action="reload-boms"]').onclick=()=>load(page);document.querySelector('[data-action="close-bom-form"]').onclick=()=>hideBomEditor();document.querySelector('[data-action="apply-filters"]').onclick=()=>load(1);document.querySelector('[data-action="reset-filters"]').onclick=resetFilters;document.querySelector('[data-action="toggle-filter-row"]').onclick=toggleFilterRow;document.querySelector('[data-action="clear-search"]').onclick=()=>{search.value='';load(1)};document.querySelector('[data-action="prev-page"]').onclick=()=>page>1&&load(page-1);document.querySelector('[data-action="next-page"]').onclick=()=>page<last&&load(page+1);pageLinks.addEventListener('click',e=>{const target=e.target.closest('[data-page]');if(target)load(Number(target.dataset.page))});document.querySelector('[data-action="export"]').onclick=csvExport;document.querySelector('[data-action="print"]').onclick=()=>window.print();document.querySelector('[data-action="toggle-columns"]').onclick=function(){const picker=this.closest('.column-picker');picker.classList.toggle('is-open');this.setAttribute('aria-expanded',picker.classList.contains('is-open')?'true':'false')};columnPickerMenu.addEventListener('change',e=>{const cb=e.target.closest('input[type="checkbox"]');if(cb)updateColumnVisibility(cb.value,cb.checked)});document.addEventListener('click',e=>{if(e.target.closest('.column-picker'))return;document.querySelector('.column-picker')?.classList.remove('is-open');document.querySelector('[data-action="toggle-columns"]')?.setAttribute('aria-expanded','false')});document.querySelectorAll('[data-sort]').forEach(button=>button.addEventListener('click',function(){if(sortBy===this.dataset.sort)sortDirection=sortDirection==='asc'?'desc':'asc';else{sortBy=this.dataset.sort;sortDirection='asc'}load(1)}));[perPage,filterStatus,filterModel,colModel,colStatus].forEach(el=>el.addEventListener('change',()=>load(1)));[search,colBomNo,colBomName,colVersion,colMaterialsMin].forEach(el=>el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>load(1),300)}));rows.addEventListener('click',async e=>{const view=e.target.closest('[data-view]')?.dataset.view;const edit=e.target.closest('[data-edit]')?.dataset.edit;const del=e.target.closest('[data-delete]')?.dataset.delete;if(view)await openBomModal('view',view);if(edit)await openBomModal('edit',edit);if(del)await deleteBom(del)});document.addEventListener('click',async e=>{if(e.target.closest('[data-action="save-bom"]'))await saveBom();if(e.target.closest('[data-action="add-line"]'))line({},false);if(e.target.closest('[data-remove-line]'))e.target.closest('tr').remove();const del=e.target.closest('[data-confirm-delete]')?.dataset.confirmDelete;if(del){try{await axios.delete(`${endpoint}/${del}`);window.ErpModal.close();await load(page);window.ErpToast?.show('BOM deleted.')}catch(error){window.ErpToast?.show(error.normalizedMessage||'Delete failed.','danger')}}});});
 </script>
 @endpush

@@ -20,8 +20,9 @@ $masterModules = [
 $operations = [
     'grn' => 'GRN',
     'stock-ledger' => 'Stock Ledger',
-    'stock-summary' => 'Stock Summary',
+    'stock-summary' => 'Raw Material Stock Summary',
     'overall-stock-summary' => 'OverAll Stock Summary',
+    'finished-product-stock-summary' => 'Finished Product Stock Summary',
     'wastage-summary' => 'Wastage Summary',
     'stock-verification' => 'Stock Verification',
     'bom' => 'BOM',
@@ -48,6 +49,7 @@ Route::view('/grn', 'modules.grn')->name('operations.grn');
 Route::view('/stock-ledger', 'modules.stock-ledger')->name('operations.stock-ledger');
 Route::view('/stock-summary', 'modules.stock-summary')->name('operations.stock-summary');
 Route::view('/overall-stock-summary', 'modules.overall-stock-summary')->name('operations.overall-stock-summary');
+Route::view('/finished-product-stock-summary', 'modules.finished-product-stock-summary')->name('operations.finished-product-stock-summary');
 Route::view('/wastage-summary', 'modules.wastage')->name('operations.wastage-summary');
 Route::view('/stock-verification', 'modules.stock-verification')->name('operations.stock-verification');
 Route::view('/bom', 'modules.bom')->name('operations.bom');
@@ -109,7 +111,7 @@ foreach ($masterModules as $slug => $title) {
 }
 
 foreach ($operations as $slug => $title) {
-    if (in_array($slug, ['grn', 'stock-ledger','overall-stock-summary', 'stock-summary', 'wastage-summary', 'stock-verification', 'bom', 'production', 'wastage', 'wastage-reuse', 'dispatch-challan', 'team-ledger', 'team-payments', 'inventory-reports', 'production-reports', 'dispatch-reports', 'payment-reports'], true)) {
+    if (in_array($slug, ['grn', 'stock-ledger','overall-stock-summary', 'finished-product-stock-summary', 'stock-summary', 'wastage-summary', 'stock-verification', 'bom', 'production', 'wastage', 'wastage-reuse', 'dispatch-challan', 'team-ledger', 'team-payments', 'inventory-reports', 'production-reports', 'dispatch-reports', 'payment-reports'], true)) {
         continue;
     }
 

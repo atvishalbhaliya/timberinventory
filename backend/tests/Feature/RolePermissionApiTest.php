@@ -43,6 +43,7 @@ class RolePermissionApiTest extends TestCase
             'purchase-grn.view',
             'stock-ledger.view',
             'stock-summary.view',
+            'overall-stock-summary.view',
             'stock-verification.view',
         ]);
 
@@ -66,6 +67,8 @@ class RolePermissionApiTest extends TestCase
             ['title' => 'GRN', 'path' => '/grn', 'permission' => 'purchase-grn.view'],
             ['title' => 'Stock Ledger', 'path' => '/stock-ledger', 'permission' => 'stock-ledger.view'],
             ['title' => 'Stock Summary', 'path' => '/stock-summary', 'permission' => 'stock-summary.view'],
+            ['title' => 'OverAll Stock Summary', 'path' => '/overall-stock-summary', 'permission' => 'overall-stock-summary.view'],
+            ['title' => 'Finished Product Stock Summary', 'path' => '/finished-product-stock-summary', 'permission' => 'overall-stock-summary.view'],
             ['title' => 'Stock Verification', 'path' => '/stock-verification', 'permission' => 'stock-verification.view'],
         ], $inventoryItems);
 
@@ -78,6 +81,8 @@ class RolePermissionApiTest extends TestCase
         $this->assertTrue($titles->contains('GRN'));
         $this->assertFalse($titles->contains('Stock Ledger'));
         $this->assertFalse($titles->contains('Stock Summary'));
+        $this->assertFalse($titles->contains('OverAll Stock Summary'));
+        $this->assertFalse($titles->contains('Finished Product Stock Summary'));
         $this->assertFalse($titles->contains('Stock Verification'));
     }
 

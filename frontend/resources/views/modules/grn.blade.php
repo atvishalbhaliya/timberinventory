@@ -4,7 +4,7 @@
 
 @section('content')
     <section class="erp-card grn-list-card">
-        <div class="grn-card-head">
+        <div class="grn-card-head" id="grn-card-head">
             <div>
                 <h1>GRN Management</h1>
                 <p class="text-muted">Manage Goods Receipt Notes efficiently</p>
@@ -15,98 +15,114 @@
             </div>
         </div>
 
-        <div class="grn-filter-row" id="grn-filter-row" hidden>
-            <div class="grn-filter-group">
-                <label class="grn-filter-field">
-                    <span>Supplier</span>
-                    <select id="filter-party"></select>
-                </label>
-                <label class="grn-filter-field">
-                    <span>Status</span>
-                    <select id="filter-status">
-                        <option value="">All Status</option>
-                        <option value="Draft">Draft</option>
-                        <option value="Posted">Posted</option>
-                        <option value="Cancelled">Cancelled</option>
-                        <option value="Pending">Pending</option>
+        <section class="grn-editor-card" id="grn-editor-card" hidden>
+            <div class="grn-editor-head">
+                <div>
+                    <h2 id="grn-editor-title">New GRN</h2>
+                    <p class="text-muted" id="grn-editor-subtitle">Create or update a goods receipt without leaving the list page.</p>
+                </div>
+                <div class="module-actions">
+                    <button class="btn-erp" type="button" data-action="close-grn-form"><i data-lucide="x"></i> Cancel</button>
+                    <button class="btn-erp btn-primary" type="button" data-action="save-grn"><i data-lucide="save"></i> Save Draft</button>
+                </div>
+            </div>
+            <div id="grn-editor-body"></div>
+        </section>
+
+        <div id="grn-list-content">
+            <div class="grn-filter-row" id="grn-filter-row" hidden>
+                <div class="grn-filter-group">
+                    <label class="grn-filter-field">
+                        <span>Supplier</span>
+                        <select id="filter-party"></select>
+                    </label>
+                    <label class="grn-filter-field">
+                        <span>Status</span>
+                        <select id="filter-status">
+                            <option value="">All Status</option>
+                            <option value="Draft">Draft</option>
+                            <option value="Posted">Posted</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </label>
+                    <div class="grn-filter-actions">
+                        <button class="btn-erp btn-primary btn-filter" type="button" data-action="apply-filters"><i data-lucide="filter"></i> Apply</button>
+                        <button class="btn-erp btn-filter btn-filter-secondary" type="button" data-action="reset-filters"><i data-lucide="filter-x"></i> Reset</button>
+                    </div>
+                    <select id="filter-branch" hidden></select>
+                </div>
+            </div>
+
+            <div class="table-toolbar grn-table-toolbar">
+                <div class="data-grid-controls">
+                    <select id="per-page">
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
                     </select>
-                </label>
-                <div class="grn-filter-actions">
-                    <button class="btn-erp btn-primary btn-filter" type="button" data-action="apply-filters"><i data-lucide="filter"></i> Apply</button>
-                    <button class="btn-erp btn-filter btn-filter-secondary" type="button" data-action="reset-filters"><i data-lucide="filter-x"></i> Reset</button>
+                    <div class="column-picker">
+                        <button class="btn-erp btn-column-picker" type="button" data-action="toggle-columns" aria-expanded="false"><i data-lucide="columns-3"></i> Columns</button>
+                        <div class="column-picker-menu" id="column-picker-menu"></div>
+                    </div>
+                    <button class="btn-erp btn-filter-toggle" type="button" data-action="toggle-filter-row" aria-controls="grn-filter-row grn-filter-head" aria-pressed="false" title="Show filters"><i data-lucide="filter"></i> Filters</button>
                 </div>
-                <select id="filter-branch" hidden></select>
-            </div>
-        </div>
-
-        <div class="table-toolbar grn-table-toolbar">
-            <div class="data-grid-controls">
-                <select id="per-page">
-                    <option value="10" selected>10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-                <div class="column-picker">
-                    <button class="btn-erp btn-column-picker" type="button" data-action="toggle-columns" aria-expanded="false"><i data-lucide="columns-3"></i> Columns</button>
-                    <div class="column-picker-menu" id="column-picker-menu"></div>
+                <div class="module-search">
+                    <i data-lucide="search"></i>
+                    <input id="grn-search" type="search" placeholder="Search GRN, supplier, status">
+                    <button class="search-clear" type="button" data-action="clear-grn-search" title="Clear search"><i data-lucide="x"></i></button>
                 </div>
-                <button class="btn-erp btn-filter-toggle" type="button" data-action="toggle-filter-row" aria-controls="grn-filter-row grn-filter-head" aria-pressed="false" title="Show filters"><i data-lucide="filter"></i> Filters</button>
             </div>
-            <div class="module-search">
-                <i data-lucide="search"></i>
-                <input id="grn-search" type="search" placeholder="Search GRN, supplier, status">
-                <button class="search-clear" type="button" data-action="clear-grn-search" title="Clear search"><i data-lucide="x"></i></button>
-            </div>
-        </div>
 
-        <div class="table-responsive grn-data-table-wrap">
-            <table class="table grn-data-table">
-                <thead>
-                    <tr>
-                        <th data-col="grn_no"><button class="sort-head" data-sort="grn_no" type="button">GRN Number <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="grn_date"><button class="sort-head" data-sort="grn_date" type="button">Date <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="supplier"><button class="sort-head" data-sort="supplier_name" type="button">Supplier <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="location"><button class="sort-head" data-sort="location" type="button">Location <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="item_count" class="text-end"><button class="sort-head sort-end" data-sort="item_count" type="button">Item Count <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="total_qty" class="text-end"><button class="sort-head sort-end" data-sort="total_qty" type="button">Total Qty <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="total_amount" class="text-end"><button class="sort-head sort-end" data-sort="total_amount" type="button">Total Amount <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="status"><button class="sort-head" data-sort="status" type="button">Status <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="created_by"><button class="sort-head" data-sort="created_by" type="button">Created By <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th data-col="created_at"><button class="sort-head" data-sort="created_at" type="button">Created Date <i data-lucide="chevrons-up-down"></i></button></th>
-                        <th class="text-end action-col">Actions</th>
-                    </tr>
-                    <tr class="grn-filter-head" id="grn-filter-head" hidden>
-                        <th data-col="grn_no"><input id="col-grn-no" type="search" placeholder="Search"></th>
-                        <th data-col="grn_date"><input id="col-grn-date" type="date"></th>
-                        <th data-col="supplier"><select id="col-party"></select></th>
-                        <th data-col="location"><select id="col-location"></select></th>
-                        <th data-col="item_count"></th>
-                        <th data-col="total_qty"></th>
-                        <th data-col="total_amount"><div class="amount-filter"><input id="col-amount-min" type="number" min="0" step="0.01" placeholder="Min"><input id="col-amount-max" type="number" min="0" step="0.01" placeholder="Max"></div></th>
-                        <th data-col="status"><select id="col-status"><option value="">All</option><option>Draft</option><option>Posted</option><option>Cancelled</option><option>Pending</option></select></th>
-                        <th data-col="created_by"><input id="col-created-by" type="search" placeholder="Search"></th>
-                        <th data-col="created_at"></th>
-                        <th class="action-col"></th>
-                    </tr>
-                </thead>
-                <tbody id="grn-body">
-                    <tr class="skeleton-row"><td colspan="11"></td></tr>
-                    <tr class="skeleton-row"><td colspan="11"></td></tr>
-                    <tr class="skeleton-row"><td colspan="11"></td></tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="pagination-row">
-            <div class="pager-actions">
-                <button class="btn-erp btn-page-nav" data-action="prev-page" type="button" title="Previous"><i data-lucide="chevron-left"></i></button>
-                <span id="grn-page-links" class="page-number-list"></span>
-                <button class="btn-erp btn-page-nav" data-action="next-page" type="button" title="Next"><i data-lucide="chevron-right"></i></button>
-                <span id="grn-page-status" class="page-record-status text-muted"></span>
+            <div class="table-responsive grn-data-table-wrap">
+                <table class="table grn-data-table">
+                    <thead>
+                        <tr>
+                            <th data-col="grn_no"><button class="sort-head" data-sort="grn_no" type="button">GRN Number <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="grn_date"><button class="sort-head" data-sort="grn_date" type="button">Date <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="supplier"><button class="sort-head" data-sort="supplier_name" type="button">Supplier <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="location"><button class="sort-head" data-sort="location" type="button">Location <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="item_count" class="text-end"><button class="sort-head sort-end" data-sort="item_count" type="button">Item Count <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="total_qty" class="text-end"><button class="sort-head sort-end" data-sort="total_qty" type="button">Total Qty <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="total_amount" class="text-end"><button class="sort-head sort-end" data-sort="total_amount" type="button">Total Amount <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="status"><button class="sort-head" data-sort="status" type="button">Status <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="created_by"><button class="sort-head" data-sort="created_by" type="button">Created By <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th data-col="created_at"><button class="sort-head" data-sort="created_at" type="button">Created Date <i data-lucide="chevrons-up-down"></i></button></th>
+                            <th class="text-end action-col">Actions</th>
+                        </tr>
+                        <tr class="grn-filter-head" id="grn-filter-head" hidden>
+                            <th data-col="grn_no"><input id="col-grn-no" type="search" placeholder="Search"></th>
+                            <th data-col="grn_date"><input id="col-grn-date" type="date"></th>
+                            <th data-col="supplier"><select id="col-party"></select></th>
+                            <th data-col="location"><select id="col-location"></select></th>
+                            <th data-col="item_count"></th>
+                            <th data-col="total_qty"></th>
+                            <th data-col="total_amount"><div class="amount-filter"><input id="col-amount-min" type="number" min="0" step="0.01" placeholder="Min"><input id="col-amount-max" type="number" min="0" step="0.01" placeholder="Max"></div></th>
+                            <th data-col="status"><select id="col-status"><option value="">All</option><option>Draft</option><option>Posted</option><option>Cancelled</option><option>Pending</option></select></th>
+                            <th data-col="created_by"><input id="col-created-by" type="search" placeholder="Search"></th>
+                            <th data-col="created_at"></th>
+                            <th class="action-col"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="grn-body">
+                        <tr class="skeleton-row"><td colspan="11"></td></tr>
+                        <tr class="skeleton-row"><td colspan="11"></td></tr>
+                        <tr class="skeleton-row"><td colspan="11"></td></tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="module-actions">
-                <button class="btn-erp" type="button" data-action="export-csv"><i data-lucide="file-spreadsheet"></i> Export CSV</button>
-                <button class="btn-erp" type="button" data-action="print-list"><i data-lucide="printer"></i> Print</button>
+            <div class="pagination-row">
+                <div class="pager-actions">
+                    <button class="btn-erp btn-page-nav" data-action="prev-page" type="button" title="Previous"><i data-lucide="chevron-left"></i></button>
+                    <span id="grn-page-links" class="page-number-list"></span>
+                    <button class="btn-erp btn-page-nav" data-action="next-page" type="button" title="Next"><i data-lucide="chevron-right"></i></button>
+                    <span id="grn-page-status" class="page-record-status text-muted"></span>
+                </div>
+                <div class="module-actions">
+                    <button class="btn-erp" type="button" data-action="export-csv"><i data-lucide="file-spreadsheet"></i> Export CSV</button>
+                    <button class="btn-erp" type="button" data-action="print-list"><i data-lucide="printer"></i> Print</button>
+                </div>
             </div>
         </div>
     </section>
@@ -130,6 +146,25 @@
     }
     .grn-card-head h1 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 800; }
     .grn-card-head p { margin: 5px 0 0; }
+    .grn-editor-card {
+        display: grid;
+        gap: 16px;
+        margin: 0 0 16px;
+        padding: 20px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+        box-shadow: 0 8px 22px rgba(15, 23, 42, .08);
+    }
+    .grn-editor-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+    }
+    .grn-editor-head h2 { margin: 0; font-size: 18px; font-weight: 800; }
+    .grn-editor-head p { margin: 4px 0 0; }
     .grn-filter-row {
         display: flex;
         align-items: flex-end;
@@ -880,7 +915,77 @@
         return response.data.data.grn_no;
     }
 
+    function showGrnEditor(mode) {
+        activeMode = mode;
+        const editor = document.getElementById('grn-editor-card');
+        const cardHead = document.getElementById('grn-card-head');
+        const listContent = document.getElementById('grn-list-content');
+        document.getElementById('grn-editor-title').textContent = mode === 'create' ? 'New GRN' : 'Edit GRN';
+        document.getElementById('grn-editor-subtitle').textContent = mode === 'create'
+            ? 'Create a new goods receipt note and stay on the page.'
+            : 'Update the draft goods receipt note and keep the list visible.';
+        document.getElementById('grn-editor-body').innerHTML = grnFormHtml(false);
+        if (cardHead) cardHead.hidden = true;
+        if (listContent) listContent.hidden = true;
+        editor.hidden = false;
+        editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function hideGrnEditor() {
+        const cardHead = document.getElementById('grn-card-head');
+        const listContent = document.getElementById('grn-list-content');
+        document.getElementById('grn-editor-card').hidden = true;
+        document.getElementById('grn-editor-body').innerHTML = '';
+        if (cardHead) cardHead.hidden = false;
+        if (listContent) listContent.hidden = false;
+        activeId = null;
+        activeMode = 'create';
+    }
+
+    async function loadGrnEditorForCreate() {
+        showGrnEditor('create');
+        lines = [nextLine()];
+        if (branchMode.show) {
+            document.getElementById('modal-branch').addEventListener('change', async function () {
+                document.getElementById('modal-grn-no').value = await previewNumber(this.value);
+            });
+            if (lookups.branches.length) {
+                document.getElementById('modal-branch').value = lookups.branches[0].branch_id;
+            }
+        }
+        document.getElementById('modal-grn-date').valueAsDate = new Date();
+        document.getElementById('modal-grn-no').value = await previewNumber(branchMode.show ? document.getElementById('modal-branch').value : branchMode.value);
+        renderModalLines(false);
+    }
+
+    async function loadGrnEditorForEdit(id) {
+        activeId = id;
+        showGrnEditor('edit');
+        const response = await window.axios.get(`${grnEndpoint}/${id}`);
+        const grn = response.data.data;
+        document.getElementById('modal-grn-no').value = grn.grn_no;
+        document.getElementById('modal-grn-date').value = grn.grn_date;
+        document.getElementById('modal-party').value = grn.supplier_id || '';
+        if (branchMode.show) document.getElementById('modal-branch').value = grn.branch_id || '';
+        document.getElementById('modal-remarks').value = grn.remarks || '';
+        lines = (grn.details || []).map(nextLine);
+        if (!lines.length) lines = [nextLine()];
+        renderModalLines(false);
+    }
+
     async function openGrnModal(mode, id = null) {
+        if (mode === 'create') {
+            await loadGrnEditorForCreate();
+            return;
+        }
+
+        if (mode === 'edit') {
+            await loadGrnEditorForEdit(id);
+            return;
+        }
+
+        hideGrnEditor();
         activeMode = mode;
         activeId = id;
         const readonly = mode === 'view';
@@ -895,31 +1000,6 @@
                 ? '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button>'
                 : '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-action="save-grn"><i data-lucide="save"></i> Save</button>',
         });
-
-        if (branchMode.show) {
-            document.getElementById('modal-branch').addEventListener('change', async function () {
-                if (mode === 'create') document.getElementById('modal-grn-no').value = await previewNumber(this.value);
-            });
-        }
-
-        if (mode === 'create') {
-            document.getElementById('modal-grn-date').valueAsDate = new Date();
-            if (branchMode.show && lookups.branches.length) document.getElementById('modal-branch').value = lookups.branches[0].branch_id;
-            document.getElementById('modal-grn-no').value = await previewNumber(branchMode.show ? document.getElementById('modal-branch').value : branchMode.value);
-            renderModalLines(false);
-            return;
-        }
-
-        const response = await window.axios.get(`${grnEndpoint}/${id}`);
-        const grn = response.data.data;
-        document.getElementById('modal-grn-no').value = grn.grn_no;
-        document.getElementById('modal-grn-date').value = grn.grn_date;
-        document.getElementById('modal-party').value = grn.supplier_id || '';
-        if (branchMode.show) document.getElementById('modal-branch').value = grn.branch_id || '';
-        document.getElementById('modal-remarks').value = grn.remarks || '';
-        lines = (grn.details || []).map(nextLine);
-        if (!lines.length) lines = [nextLine()];
-        renderModalLines(readonly);
     }
 
     function modalPayload() {
@@ -947,7 +1027,8 @@
             if (activeMode === 'edit') await window.axios.put(`${grnEndpoint}/${activeId}`, modalPayload());
             else await window.axios.post(grnEndpoint, modalPayload());
             window.ErpApi?.clearLookupCache?.();
-            window.ErpModal.close();
+            hideGrnEditor();
+            window.ErpModal.close?.();
             await loadGrns(currentPage);
             toast('GRN saved.');
         } catch (error) {
@@ -993,6 +1074,7 @@
 
         document.querySelector('[data-action="new-grn"]').addEventListener('click', () => openGrnModal('create'));
         document.querySelector('[data-action="reload-grns"]').addEventListener('click', () => loadGrns(currentPage));
+        document.querySelector('[data-action="close-grn-form"]').addEventListener('click', () => hideGrnEditor());
         document.querySelector('[data-action="clear-grn-search"]').addEventListener('click', () => {
             document.getElementById('grn-search').value = '';
             loadGrns(1);

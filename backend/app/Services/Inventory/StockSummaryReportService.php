@@ -182,7 +182,7 @@ class StockSummaryReportService
         ];
     }
 
-    private function query(Request $request)
+    protected function query(Request $request)
     {
         $user = $request->user();
         $query = DB::table('stock_summary')
@@ -219,6 +219,8 @@ class StockSummaryReportService
                 'ledger_last.last_movement_date',
             ]);
 
+        $this->applyItemTypeFilter($query);
+
         foreach ([
             'item_id' => 'stock_summary.item_id',
             'item_type' => 'item_master.item_type',
@@ -250,6 +252,27 @@ class StockSummaryReportService
         }
 
         return $query;
+    }
+
+    protected function itemTypePatterns(): array
+    {
+        return ['Raw Material%'];
+    }
+
+    protected function applyItemTypeFilter($query): void
+    {
+        $patterns = array_values(array_filter($this->itemTypePatterns(), fn ($pattern) => is_string($pattern) && $pattern !== ''));
+
+        if ($patterns === []) {
+            return;
+        }
+
+        $query->where(function ($nested) use ($patterns): void {
+            foreach ($patterns as $index => $pattern) {
+                $method = $index === 0 ? 'where' : 'orWhere';
+                $nested->{$method}('item_master.item_type', 'like', $pattern);
+            }
+        });
     }
 
     private function applySorting($query, Request $request): void

@@ -39,6 +39,19 @@ class InventoryControlApiTest extends TestCase
     {
         [$user, $data] = $this->fixture(['stock-summary.view']);
         $this->seedStock($data, 20);
+        $finishedItemId = DB::table('item_master')->insertGetId([
+            'tenant_id' => $data['tenant_id'],
+            'item_name' => 'Finished Pallet',
+            'item_code' => 'PALLET',
+            'item_type' => 'Finish Product',
+            'material_type_id' => $data['material_type_id'],
+            'uom_id' => $data['uom_id'],
+            'minimum_stock' => 5,
+            'status' => 'Active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->seedStockForItem($data, $finishedItemId, 12);
         Sanctum::actingAs($user);
 
         $this->getJson('/api/v1/stock-summary')
@@ -46,6 +59,62 @@ class InventoryControlApiTest extends TestCase
             ->assertJsonPath('data.data.0.item_name', 'Wood Plank')
             ->assertJsonPath('data.data.0.available_qty', 20)
             ->assertJsonPath('metrics.available_stock', 20);
+    }
+
+    public function test_overall_stock_summary_shows_all_item_types(): void
+    {
+        [$user, $data] = $this->fixture(['stock-summary.view']);
+        $this->seedStock($data, 20);
+        $finishedItemId = DB::table('item_master')->insertGetId([
+            'tenant_id' => $data['tenant_id'],
+            'item_name' => 'Finished Pallet',
+            'item_code' => 'PALLET',
+            'item_type' => 'Finish Product',
+            'material_type_id' => $data['material_type_id'],
+            'uom_id' => $data['uom_id'],
+            'minimum_stock' => 5,
+            'status' => 'Active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->seedStockForItem($data, $finishedItemId, 12);
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/overall-stock-summary')
+            ->assertOk()
+            ->assertJsonPath('metrics.available_stock', 32);
+
+        $items = collect($response->json('data.data'))->pluck('item_name');
+        $this->assertTrue($items->contains('Wood Plank'));
+        $this->assertTrue($items->contains('Finished Pallet'));
+    }
+
+    public function test_finished_product_stock_summary_shows_finished_products_only(): void
+    {
+        [$user, $data] = $this->fixture(['overall-stock-summary.view']);
+        $this->seedStock($data, 20);
+        $finishedItemId = DB::table('item_master')->insertGetId([
+            'tenant_id' => $data['tenant_id'],
+            'item_name' => 'Finished Pallet',
+            'item_code' => 'PALLET',
+            'item_type' => 'Finish Product',
+            'material_type_id' => $data['material_type_id'],
+            'uom_id' => $data['uom_id'],
+            'minimum_stock' => 5,
+            'status' => 'Active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->seedStockForItem($data, $finishedItemId, 12);
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/finished-product-stock-summary')
+            ->assertOk()
+            ->assertJsonPath('metrics.available_stock', 12);
+
+        $items = collect($response->json('data.data'))->pluck('item_name');
+        $this->assertTrue($items->contains('Finished Pallet'));
+        $this->assertFalse($items->contains('Wood Plank'));
     }
 
     public function test_stock_verification_crud_and_approval_creates_adjustment_ledger(): void
@@ -131,10 +200,15 @@ class InventoryControlApiTest extends TestCase
 
     private function seedStock(array $data, float $qty): void
     {
+        $this->seedStockForItem($data, $data['item_id'], $qty);
+    }
+
+    private function seedStockForItem(array $data, int $itemId, float $qty): void
+    {
         DB::table('stock_summary')->insert([
             'tenant_id' => $data['tenant_id'],
             'branch_id' => $data['branch_id'],
-            'item_id' => $data['item_id'],
+            'item_id' => $itemId,
             'location_id' => $data['location_id'],
             'stock_qty' => $qty,
             'avg_rate' => 0,
@@ -144,7 +218,7 @@ class InventoryControlApiTest extends TestCase
         DB::table('stock_ledger')->insert([
             'tenant_id' => $data['tenant_id'],
             'branch_id' => $data['branch_id'],
-            'item_id' => $data['item_id'],
+            'item_id' => $itemId,
             'location_id' => $data['location_id'],
             'transaction_date' => '2026-06-09 00:00:00',
             'transaction_type' => 'GRN',

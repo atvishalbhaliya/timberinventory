@@ -99,8 +99,8 @@ class MasterDataController extends Controller
             'table' => 'item_master',
             'key' => 'item_id',
             'title' => 'Item',
-            'search' => ['item_code', 'item_name', 'item_type', 'status'],
-            'columns' => ['item_code', 'item_name', 'item_type', 'material_type_id', 'uom_id', 'length_mm', 'width_mm', 'thickness_mm', 'cft_factor', 'minimum_stock', 'opening_qty', 'opening_rate', 'status', 'created_at'],
+            'search' => ['item_code', 'item_name', 'item_type', 'category', 'status'],
+            'columns' => ['item_code', 'item_name', 'item_type', 'material_type_id', 'uom_id', 'length_mm', 'width_mm', 'thickness_mm', 'cft_factor', 'minimum_stock', 'category', 'opening_qty', 'opening_rate', 'status', 'created_at'],
             'required' => ['item_name', 'item_type'],
             'tenant_scope' => true,
             'branch_scope' => false,
@@ -327,8 +327,8 @@ class MasterDataController extends Controller
 
             $handle = fopen('php://output', 'w');
             fputcsv($handle, $this->itemImportHeaders());
-            fputcsv($handle, ['RM-PLY-001', 'Plywood 18mm', 'Raw Material', 'Wood', 'CFT', '2440', '1220', '18', '1', '10', 'Active']);
-            fputcsv($handle, ['FG-PALLET-001', 'Standard Pallet', 'Finish Product', 'Finished Goods', 'PCS', '1200', '1000', '150', '1', '0', 'Active']);
+            fputcsv($handle, ['RM-PLY-001', 'Plywood 18mm', 'Raw Material', 'Wood', 'CFT', '2440', '1220', '18', '1', '10', 'Sheet', 'Active']);
+            fputcsv($handle, ['FG-PALLET-001', 'Standard Pallet', 'Finish Product', 'Finished Goods', 'PCS', '1200', '1000', '150', '1', '0', 'Packed Goods', 'Active']);
             fclose($handle);
         }, 'item-import-template.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -423,6 +423,7 @@ class MasterDataController extends Controller
                 'thickness_mm' => $numeric['thickness_mm'],
                 'cft_factor' => $numeric['cft_factor'],
                 'minimum_stock' => $numeric['minimum_stock'] ?? 0,
+                'category' => trim((string) $this->importValue($data, ['category'])),
                 'opening_qty' => 0,
                 'opening_rate' => 0,
                 'status' => $status,
@@ -508,7 +509,7 @@ class MasterDataController extends Controller
 
     private function itemImportHeaders(): array
     {
-        return ['item_code', 'item_name', 'item_type', 'material_type', 'uom', 'length_mm', 'width_mm', 'thickness_mm', 'cft_factor', 'minimum_stock', 'status'];
+        return ['item_code', 'item_name', 'item_type', 'material_type', 'uom', 'length_mm', 'width_mm', 'thickness_mm', 'cft_factor', 'minimum_stock', 'category', 'status'];
     }
 
     private function readItemImportCsv(string $path): array
@@ -854,7 +855,7 @@ class MasterDataController extends Controller
             }
         }
 
-        foreach (['length_mm', 'width_mm', 'thickness_mm', 'cft_factor', 'material_type_id', 'uom_id'] as $column) {
+        foreach (['length_mm', 'width_mm', 'thickness_mm', 'cft_factor', 'material_type_id', 'uom_id', 'category'] as $column) {
             if (array_key_exists($column, $data) && $data[$column] === '') {
                 $data[$column] = null;
             }

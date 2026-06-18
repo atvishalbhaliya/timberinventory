@@ -148,7 +148,7 @@ const reports = {
         endpoint: '/v1/stock-summary',
         searchPlaceholder: 'Search item or code',
         filters: [
-            { key: 'item_type', label: 'Item Type', type: 'select', placeholder: 'All Types', options: ['Raw Material', 'Finish Product', 'Wastage', 'Scrap'] },
+            { key: 'item_type', label: 'Item Type', type: 'select', placeholder: 'All Types', options: ['Raw Material'] },
             { key: 'stock_status', label: 'Stock Status', type: 'select', placeholder: 'All Statuses', options: ['available', 'low', 'out'] },
             { key: 'location_id', label: 'Location', type: 'lookup', placeholder: 'All Locations', source: '/v1/locations', valueKey: 'location_id', labelKey: 'location_name' },
         ],

@@ -131,6 +131,7 @@ return new class extends Migration
             $table->decimal('thickness_mm', 18, 3)->nullable();
             $table->decimal('cft_factor', 18, 6)->nullable();
             $table->decimal('minimum_stock', 18, 3)->default(0);
+            $table->string('category', 100)->nullable()->after('minimum_stock');
             $table->decimal('opening_qty', 18, 3)->default(0);
             $table->decimal('opening_rate', 18, 2)->default(0);
             $table->enum('status', ['Active', 'Inactive'])->default('Active');
