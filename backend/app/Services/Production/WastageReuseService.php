@@ -300,10 +300,13 @@ class WastageReuseService
             ->select(
                 'wastage_reuse_master.*',
                 'source_item.item_name as source_item_name',
+                'source_item.item_code as source_item_code',
                 'produced_item.item_name as produced_item_name',
+                 'produced_item.item_code as produced_item_code',
                 'source_location.location_name as source_location_name',
                 'destination_location.location_name as destination_location_name',
                 'team_master.team_name',
+               
             );
     }
 
