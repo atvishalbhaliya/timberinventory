@@ -55,6 +55,7 @@
                 <thead>
                     <tr>
                         <th data-col="item_code"><button class="sort-head" data-sort="item_code" type="button">Item Code <i data-lucide="chevrons-up-down"></i></button></th>
+                        <th data-col="category"><button class="sort-head" data-sort="category" type="button">Category <i data-lucide="chevrons-up-down"></i></button></th>
                         <th data-col="item_name"><button class="sort-head" data-sort="item_name" type="button">Item Name <i data-lucide="chevrons-up-down"></i></button></th>
                         <th data-col="material_type"><button class="sort-head" data-sort="material_type_name" type="button">Material Type <i data-lucide="chevrons-up-down"></i></button></th>
                         <th data-col="uom"><button class="sort-head" data-sort="uom_name" type="button">UOM <i data-lucide="chevrons-up-down"></i></button></th>
@@ -68,8 +69,8 @@
                     </tr>
                     <tr class="summary-filter-head" id="summary-filter-head" hidden>
                         <th data-col="item_code"><input id="col-item-code" type="search" placeholder="Search"></th>
-                        <th data-col="item_name"><input id="col-item-name" type="search" placeholder="Search"></th>
                         <th data-col="material_type"><select id="col-material-type"></select></th>
+                        <th data-col="item_name"><input id="col-item-name" type="search" placeholder="Search"></th>
                         <th data-col="uom"></th>
                         <th data-col="stock_type"></th>
                         <th data-col="available_qty"><input id="col-qty-min" type="number" step="0.001" placeholder="Min"></th>
@@ -80,7 +81,7 @@
                         <th class="action-col"></th>
                     </tr>
                 </thead>
-                <tbody id="rows"><tr class="skeleton-row"><td colspan="12"></td></tr></tbody>
+                <tbody id="rows"><tr class="skeleton-row"><td colspan="13"></td></tr></tbody>
             </table>
         </div>
 
@@ -131,7 +132,7 @@
     .column-picker-menu input { width:16px; height:16px; accent-color:var(--primary); }
     .is-hidden-column { display:none !important; }
     .summary-data-table-wrap { max-height:calc(100vh - 410px); min-height:320px; margin:0 20px 16px; overflow:auto; }
-    .summary-data-table { min-width:1280px; table-layout:auto; border-collapse:separate; border-spacing:0; }
+    .summary-data-table { min-width:1380px; table-layout:auto; border-collapse:separate; border-spacing:0; }
     .summary-data-table th, .summary-data-table td { border-right:1px solid color-mix(in srgb, var(--border) 54%, transparent); border-bottom:1px solid color-mix(in srgb, var(--border) 54%, transparent); }
     .summary-data-table th:last-child, .summary-data-table td:last-child { border-right:0; }
     .summary-data-table th { top:0; z-index:4; height:44px; padding:0 12px; vertical-align:middle; white-space:nowrap; letter-spacing:0; color:var(--muted); font-size:12px; font-weight:900; text-transform:uppercase; }
@@ -169,13 +170,13 @@
         .summary-filter-group .btn-erp, .pager-actions .btn-erp, .module-actions .btn-erp { width:100%; }
         .summary-table-toolbar .module-search { width:100%; }
         .summary-data-table-wrap { max-height:none; min-height:0; margin-inline:12px; }
-        .summary-data-table { min-width:1180px; }
+        .summary-data-table { min-width:1280px; }
     }
 </style>
 <script>
 const endpoint='/v1/overall-stock-summary';
-const columnOptions=[['item_code','Item Code'],['item_name','Item Name'],['material_type','Material Type'],['uom','UOM'],['stock_type','Stock Type'],['available_qty','Available Qty'],['rate','Rate'],['value','Value'],['last_movement','Last Movement'],['status','Status']];
-const defaultVisibleColumns=['item_code','item_name','material_type','uom','stock_type','available_qty','rate','value','status'];
+const columnOptions=[['item_code','Item Code'],['category','Category'],['item_name','Item Name'],['material_type','Material Type'],['uom','UOM'],['stock_type','Stock Type'],['available_qty','Available Qty'],['rate','Rate'],['value','Value'],['last_movement','Last Movement'],['status','Status']];
+const defaultVisibleColumns=['item_code','category','item_name','material_type','uom','stock_type','available_qty','rate','value','status'];
 const columnStorageKey='stockSummary.visibleColumns.v3';
 let page=1,last=1,timer,summaryRows=[],visibleColumns=readVisibleColumns(),paginationMeta={from:0,to:0,total:0},sortBy=sessionStorage.getItem('stockSummary.sortBy')||'item_name',sortDirection=sessionStorage.getItem('stockSummary.sortDirection')||'asc';
 const opts=(rows,k,l,p)=>`<option value="">${p}</option>`+rows.map(r=>`<option value="${r[k]}">${r[l]||r[k]}</option>`).join('');
@@ -240,7 +241,7 @@ async function load(p = page) {
 }
 function money(v){return Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}
 function qty(v){return Number(v||0).toLocaleString(undefined,{maximumFractionDigits:3})}
-function renderRows(){rows.innerHTML=summaryRows.length?summaryRows.map(x=>`<tr><td data-col="item_code">${x.item_code||''}</td><td data-col="item_name">${x.item_name}</td><td data-col="material_type">${x.material_type_name||''}</td><td data-col="uom">${x.uom_name||''}</td><td data-col="stock_type">${x.stock_type||'Fresh'}</td><td data-col="available_qty" class="text-end">${qty(x.available_qty)}</td><td data-col="rate" class="text-end">${money(x.avg_rate)}</td><td data-col="value" class="text-end">${money(x.stock_value)}</td><td data-col="last_movement">${x.last_movement_date||''}</td><td data-col="status">${statusBadge(x.available_qty,x.minimum_stock)}</td><td class="text-end action-col"><span class="summary-actions"><button class="icon-btn" type="button" data-history-item="${x.item_id}" data-history-location="${x.location_id||''}" data-history-title="${String(x.item_name||'').replaceAll('"','&quot;')}" title="Stock History"><i data-lucide="history"></i></button></span></td></tr>`).join(''):'<tr><td colspan="11" class="text-muted">No stock found.</td></tr>';applyColumnVisibility();lucide?.createIcons()}
+function renderRows(){rows.innerHTML=summaryRows.length?summaryRows.map(x=>`<tr><td data-col="item_code">${x.item_code||''}</td><td data-col="category">${x.category||''}</td><td data-col="item_name">${x.item_name}</td><td data-col="material_type">${x.material_type_name||''}</td><td data-col="uom">${x.uom_name||''}</td><td data-col="stock_type">${x.stock_type||'Fresh'}</td><td data-col="available_qty" class="text-end">${qty(x.available_qty)}</td><td data-col="rate" class="text-end">${money(x.avg_rate)}</td><td data-col="value" class="text-end">${money(x.stock_value)}</td><td data-col="last_movement">${x.last_movement_date||''}</td><td data-col="status">${statusBadge(x.available_qty,x.minimum_stock)}</td><td class="text-end action-col"><span class="summary-actions"><button class="icon-btn" type="button" data-history-item="${x.item_id}" data-history-location="${x.location_id||''}" data-history-title="${String(x.item_name||'').replaceAll('"','&quot;')}" title="Stock History"><i data-lucide="history"></i></button></span></td></tr>`).join(''):'<tr><td colspan="13" class="text-muted">No stock found.</td></tr>';applyColumnVisibility();lucide?.createIcons()}
 function renderSortHeaders(){document.querySelectorAll('[data-sort]').forEach(button=>{const active=button.dataset.sort===sortBy;button.classList.toggle('is-active',active);const label=button.dataset.label||button.textContent.trim();button.dataset.label=label;button.innerHTML=`${label} <i data-lucide="${active?(sortDirection==='asc'?'arrow-up':'arrow-down'):'chevrons-up-down'}"></i>`});lucide?.createIcons()}
 function pageRange(){const pages=[];if(last<=7){for(let i=1;i<=last;i++)pages.push(i);return pages}pages.push(1);let start=Math.max(2,page-1),end=Math.min(last-1,page+1);if(page<=2){start=2;end=3}else if(page>=last-1){start=last-2;end=last-1}if(start>2)pages.push('...');for(let i=start;i<=end;i++)pages.push(i);if(end<last-1)pages.push('...');pages.push(last);return pages}
 function renderPager(){pageLinks.innerHTML=pageRange().map(value=>value==='...'?'<span class="page-number-ellipsis">...</span>':`<button class="btn-erp btn-page-number ${Number(value)===page?'is-active':''}" type="button" data-page="${value}">${value}</button>`).join('');pageStatus.textContent=paginationMeta.total?`Showing ${paginationMeta.from} to ${paginationMeta.to} of ${paginationMeta.total} records`:'Showing 0 to 0 of 0 records';document.querySelector('[data-action="prev-page"]').disabled=page<=1;document.querySelector('[data-action="next-page"]').disabled=page>=last;lucide?.createIcons()}
@@ -253,6 +254,7 @@ function csvExport() {
      
     const valueMap = {
         item_code: x => x.item_code,
+        category: x => x.category || '',
         item_name: x => x.item_name,
         material_type: x => x.material_type_name,
         uom: x => x.uom_name,

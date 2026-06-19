@@ -389,6 +389,9 @@ async function saveRole() {
         localStorage.removeItem('timber-sidebar-navigation-v2');
         localStorage.removeItem('timber-sidebar-navigation-v3');
         localStorage.removeItem('timber-sidebar-navigation-v4');
+        localStorage.removeItem('timber-sidebar-navigation-v5');
+        localStorage.removeItem('timber-sidebar-navigation-v6');
+        localStorage.removeItem('timber-sidebar-navigation-v7');
         await loadRoles(rolePage);
         const freshRole = roles.find(role => role.id === savedRole.id) || savedRole;
         setRoleForm(freshRole);

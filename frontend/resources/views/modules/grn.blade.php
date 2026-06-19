@@ -963,15 +963,18 @@
         activeId = id;
         showGrnEditor('edit');
         const response = await window.axios.get(`${grnEndpoint}/${id}`);
-        const grn = response.data.data;
-        document.getElementById('modal-grn-no').value = grn.grn_no;
-        document.getElementById('modal-grn-date').value = grn.grn_date;
+        fillGrnModal(response.data.data, false);
+    }
+
+    function fillGrnModal(grn, readonly = false) {
+        document.getElementById('modal-grn-no').value = grn.grn_no || '';
+        document.getElementById('modal-grn-date').value = grn.grn_date || '';
         document.getElementById('modal-party').value = grn.supplier_id || '';
-        if (branchMode.show) document.getElementById('modal-branch').value = grn.branch_id || '';
+        if (branchMode.show && document.getElementById('modal-branch')) document.getElementById('modal-branch').value = grn.branch_id || '';
         document.getElementById('modal-remarks').value = grn.remarks || '';
         lines = (grn.details || []).map(nextLine);
         if (!lines.length) lines = [nextLine()];
-        renderModalLines(false);
+        renderModalLines(readonly);
     }
 
     async function openGrnModal(mode, id = null) {
@@ -989,7 +992,6 @@
         activeMode = mode;
         activeId = id;
         const readonly = mode === 'view';
-        lines = [nextLine()];
 
         window.ErpModal.open({
             title: mode === 'create' ? 'New GRN' : mode === 'edit' ? 'Edit GRN' : 'View GRN',
@@ -1000,6 +1002,9 @@
                 ? '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button>'
                 : '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-action="save-grn"><i data-lucide="save"></i> Save</button>',
         });
+
+        const response = await window.axios.get(`${grnEndpoint}/${id}`);
+        fillGrnModal(response.data.data, readonly);
     }
 
     function modalPayload() {

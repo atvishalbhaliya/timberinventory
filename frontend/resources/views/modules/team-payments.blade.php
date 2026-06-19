@@ -288,6 +288,12 @@ function csvExport() {
 
 function paymentHistoryHtml(entries) {
     if (!entries.length) return '<p class="text-muted" style="margin:0;">No payment history recorded yet.</p>';
+    const ordered = [...entries].sort((a, b) => {
+        const dateDiff = String(a.payment_date || '').localeCompare(String(b.payment_date || ''));
+        if (dateDiff !== 0) return dateDiff;
+        return Number(a.entry_id || 0) - Number(b.entry_id || 0);
+    });
+    let runningPaid = 0;
     return `
         <div class="table-responsive">
             <table class="table" style="min-width:760px;">
@@ -297,28 +303,74 @@ function paymentHistoryHtml(entries) {
                         <th>Mode</th>
                         <th>Reference</th>
                         <th class="text-end">Amount</th>
+                        <th class="text-end">Running Paid</th>
                         <th>Created By</th>
                         <th>Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${entries.map((entry) => `
+                    ${ordered.map((entry) => {
+                        runningPaid += Number(entry.payment_amount || 0);
+                        return `
                         <tr>
                             <td>${escapeHtml(entry.payment_date || '')}</td>
                             <td>${escapeHtml(entry.payment_mode || '')}</td>
                             <td>${escapeHtml(entry.reference_no || '')}</td>
                             <td class="text-end">${money(entry.payment_amount)}</td>
+                            <td class="text-end">${money(runningPaid)}</td>
                             <td>${escapeHtml(entry.created_by_name || '')}</td>
                             <td>${escapeHtml(entry.remarks || '')}</td>
                         </tr>
-                    `).join('')}
+                    `;}).join('')}
                 </tbody>
             </table>
         </div>
     `;
 }
 
-function paymentModalBody(summary, entries = []) {
+function dispatchHistoryHtml(entries) {
+    if (!entries.length) return '<p class="text-muted" style="margin:0;">No dispatch amount history recorded yet.</p>';
+    const ordered = [...entries].sort((a, b) => {
+        const dateDiff = String(a.transaction_date || '').localeCompare(String(b.transaction_date || ''));
+        if (dateDiff !== 0) return dateDiff;
+        return Number(a.ledger_id || 0) - Number(b.ledger_id || 0);
+    });
+    let runningDispatch = 0;
+    return `
+        <div class="table-responsive">
+            <table class="table" style="min-width:860px;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Challan</th>
+                        <th>Vehicle</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-end">Running Amount</th>
+                        <th>Created By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${ordered.map((entry) => {
+                        runningDispatch += Number(entry.amount || 0);
+                        return `
+                        <tr>
+                            <td>${escapeHtml(entry.transaction_date || '')}</td>
+                            <td>${escapeHtml(entry.challan_no || entry.reference_id || '')}</td>
+                            <td>${escapeHtml(entry.vehicle_no || '')}</td>
+                            <td class="text-end">${qty(entry.qty)}</td>
+                            <td class="text-end">${money(entry.amount)}</td>
+                            <td class="text-end">${money(runningDispatch)}</td>
+                            <td>${escapeHtml(entry.created_by_name || '')}</td>
+                        </tr>
+                    `;}).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function paymentModalBody(summary, paymentEntries = [], dispatchEntries = []) {
     return `
         <div class="payment-modal-body">
             <div class="payment-modal-grid">
@@ -330,14 +382,18 @@ function paymentModalBody(summary, entries = []) {
                 <div class="field"><i data-lucide="circle-alert"></i><label>Pending Amount</label><input value="${money(summary?.pending_amount)}" disabled></div>
             </div>
             <div class="payment-history-card">
-                <h3 class="erp-card-title" style="margin-top:0;">Payment History</h3>
-                ${paymentHistoryHtml(entries)}
+                <h3 class="erp-card-title" style="margin-top:0;">Payment Amount History</h3>
+                ${paymentHistoryHtml(paymentEntries)}
+            </div>
+            <div class="payment-history-card">
+                <h3 class="erp-card-title" style="margin-top:0;">Dispatch Amount History</h3>
+                ${dispatchHistoryHtml(dispatchEntries)}
             </div>
         </div>
     `;
 }
 
-function paymentEntryBody(summary) {
+function paymentEntryBody(summary, paymentEntries = [], dispatchEntries = []) {
     return `
         <div class="payment-modal-body">
             <div class="payment-modal-grid">
@@ -355,6 +411,14 @@ function paymentEntryBody(summary) {
                 <div class="field"><i data-lucide="hash"></i><label>Reference No</label><input id="reference_no" type="text" placeholder="Optional"></div>
                 <div class="field"><i data-lucide="message-square"></i><label>Remarks</label><input id="remarks" type="text" placeholder="Optional"></div>
             </div>
+            <div class="payment-history-card">
+                <h3 class="erp-card-title" style="margin-top:0;">Payment Amount History</h3>
+                ${paymentHistoryHtml(paymentEntries)}
+            </div>
+            <div class="payment-history-card">
+                <h3 class="erp-card-title" style="margin-top:0;">Dispatch Amount History</h3>
+                ${dispatchHistoryHtml(dispatchEntries)}
+            </div>
             <div id="payment-errors" class="form-errors" hidden></div>
         </div>
     `;
@@ -363,12 +427,13 @@ function paymentEntryBody(summary) {
 async function openViewModal(paymentId) {
     const response = await axios.get(`${endpoint}/${paymentId}`);
     const summary = response.data.data.summary;
-    const entries = response.data.data.entries || [];
+    const paymentEntries = response.data.data.entries || [];
+    const dispatchEntries = response.data.data.dispatches || [];
     window.ErpModal.open({
         title: 'View Team Payment',
         subtitle: 'Payment summary and settlement history.',
         size: 'lg',
-        body: paymentModalBody(summary, entries),
+        body: paymentModalBody(summary, paymentEntries, dispatchEntries),
         footer: '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Close</button>',
     });
     lucide?.createIcons();
@@ -377,6 +442,8 @@ async function openViewModal(paymentId) {
 async function openPayModal(paymentId) {
     const response = await axios.get(`${endpoint}/${paymentId}`);
     const summary = response.data.data.summary;
+    const paymentEntries = response.data.data.entries || [];
+    const dispatchEntries = response.data.data.dispatches || [];
     if (Number(summary?.pending_amount || 0) <= 0) {
         window.ErpToast?.show('This team payment is already settled.', 'info');
         return;
@@ -385,7 +452,7 @@ async function openPayModal(paymentId) {
         title: 'Record Team Payment',
         subtitle: 'Apply a payment against the current pending amount.',
         size: 'lg',
-        body: paymentEntryBody(summary),
+        body: paymentEntryBody(summary, paymentEntries, dispatchEntries),
         footer: '<button class="btn-erp" type="button" data-modal-close><i data-lucide="x"></i> Cancel</button><button class="btn-erp btn-primary" type="button" data-action="submit-payment" data-payment-id="' + paymentId + '"><i data-lucide="save"></i> Save Payment</button>',
     });
     document.getElementById('payment_date').valueAsDate = new Date();

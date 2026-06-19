@@ -93,6 +93,9 @@ const sectionIcons = {
 };
 
 const routePermissions = {
+    '/items': 'masters.view',
+    '/raw-material-items': 'masters.view',
+    '/finish-product-items': 'masters.view',
     '/stock-ledger': 'stock-ledger.view',
     '/stock-summary': 'stock-summary.view',
     '/stock-verification': 'stock-verification.view',
@@ -160,8 +163,8 @@ const enforceRoutePermission = async () => {
 };
 
 const activePath = (path) => window.location.pathname === path || (window.location.pathname === '/' && path === '/dashboard');
-const oldNavCacheKeys = ['timber-sidebar-navigation-v1', 'timber-sidebar-navigation-v2', 'timber-sidebar-navigation-v3', 'timber-sidebar-navigation-v4', 'timber-sidebar-navigation-v5'];
-const navCacheKey = 'timber-sidebar-navigation-v6';
+const oldNavCacheKeys = ['timber-sidebar-navigation-v1', 'timber-sidebar-navigation-v2', 'timber-sidebar-navigation-v3', 'timber-sidebar-navigation-v4', 'timber-sidebar-navigation-v5', 'timber-sidebar-navigation-v6'];
+const navCacheKey = 'timber-sidebar-navigation-v7';
 const navCacheTtlMs = 5 * 60 * 1000;
 let lastRenderedNav = '';
 

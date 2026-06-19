@@ -72,6 +72,9 @@
                         localStorage.removeItem('timber-sidebar-navigation-v2');
                         localStorage.removeItem('timber-sidebar-navigation-v3');
                         localStorage.removeItem('timber-sidebar-navigation-v4');
+                        localStorage.removeItem('timber-sidebar-navigation-v5');
+                        localStorage.removeItem('timber-sidebar-navigation-v6');
+                        localStorage.removeItem('timber-sidebar-navigation-v7');
                         
                         // Update axios header
                         window.axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.data.token}`;

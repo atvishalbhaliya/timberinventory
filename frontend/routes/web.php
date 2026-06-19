@@ -80,7 +80,17 @@ Route::view('/payment-reports', 'modules.report', [
     'reportKey' => 'payment',
     'description' => 'Team payment settlements, pending dues, and payment history.',
 ])->name('operations.payment-reports');
-Route::view('/items', 'modules.items')->name('modules.items');
+Route::redirect('/items', '/raw-material-items')->name('modules.items');
+Route::view('/raw-material-items', 'modules.items', [
+    'defaultItemType' => 'Raw Material',
+    'pageTitle' => 'Raw Material Item Master',
+    'pageDescription' => 'Manage raw material items in a dedicated CRUD screen.',
+])->name('modules.raw-material-items');
+Route::view('/finish-product-items', 'modules.items', [
+    'defaultItemType' => 'Finish Product',
+    'pageTitle' => 'Finish Product Item Master',
+    'pageDescription' => 'Manage finished product items in a dedicated CRUD screen.',
+])->name('modules.finish-product-items');
 Route::redirect('/parties', '/customers')->name('modules.parties');
 Route::get('/customers', fn () => view('modules.party-directory', [
     'partyType' => 'Customer',
