@@ -30,6 +30,7 @@ class WastageReuseResource extends JsonResource
             'production_cost' => (float) $this->production_cost,
             'status' => $this->status,
             'remarks' => $this->remarks,
+            'details' => $this->details ?? [],
             'created_by' => $this->created_by ?? null,
             'updated_by' => $this->updated_by ?? null,
             'posted_by' => $this->posted_by ?? null,

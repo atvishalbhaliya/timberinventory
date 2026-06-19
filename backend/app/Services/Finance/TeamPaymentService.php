@@ -159,6 +159,35 @@ class TeamPaymentService
             ->get();
     }
 
+    public function dispatchHistory(Request $request, int $paymentId): Collection
+    {
+        $summary = $this->find($request, $paymentId);
+
+        return DB::table('team_ledger')
+            ->leftJoin('challan_master', 'team_ledger.reference_id', '=', 'challan_master.challan_id')
+            ->leftJoin('users as creator', 'team_ledger.created_by', '=', 'creator.id')
+            ->where('team_ledger.tenant_id', $summary->tenant_id)
+            ->where('team_ledger.branch_id', $summary->branch_id)
+            ->where('team_ledger.team_id', $summary->team_id)
+            ->where('team_ledger.transaction_type', 'Dispatch')
+            ->where('team_ledger.reference_type', 'Dispatch Challan')
+            ->whereMonth('team_ledger.transaction_date', $summary->payment_month)
+            ->whereYear('team_ledger.transaction_date', $summary->payment_year)
+            ->select([
+                'team_ledger.ledger_id',
+                'team_ledger.transaction_date',
+                'team_ledger.qty',
+                'team_ledger.amount',
+                'team_ledger.reference_id',
+                'challan_master.challan_no',
+                'challan_master.vehicle_no',
+                'creator.full_name as created_by_name',
+            ])
+            ->orderByDesc('team_ledger.transaction_date')
+            ->orderByDesc('team_ledger.ledger_id')
+            ->get();
+    }
+
     public function addPayment(Request $request, int $paymentId, array $data): object
     {
         $summary = $this->find($request, $paymentId);

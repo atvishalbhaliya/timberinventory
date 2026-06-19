@@ -41,7 +41,10 @@ class WastageReuseService
 
     public function find(Request $request, int $id): object
     {
-        return $this->baseQuery($request)->where('wastage_reuse_master.reuse_id', $id)->firstOrFail();
+        $reuse = $this->baseQuery($request)->where('wastage_reuse_master.reuse_id', $id)->firstOrFail();
+        $reuse->details = $this->reuseDetails($id);
+
+        return $reuse;
     }
 
     public function previewNextNumber(Request $request): string
@@ -59,7 +62,8 @@ class WastageReuseService
     {
         return DB::transaction(function () use ($request, $data): object {
             $payload = $this->payload($request, $data, true);
-            $id = DB::table('wastage_reuse_master')->insertGetId($payload, 'reuse_id');
+            $id = DB::table('wastage_reuse_master')->insertGetId($payload['master'], 'reuse_id');
+            $this->replaceDetails($id, $payload['details']);
             $this->audit->record($request, 'wastage_reuse_master', 'create', $id, null, $payload);
 
             return $this->find($request, $id);
@@ -72,7 +76,8 @@ class WastageReuseService
             $existing = $this->scopedForUpdate($request, $id);
             $this->ensureDraft($existing);
             $payload = $this->payload($request, $data, false);
-            DB::table('wastage_reuse_master')->where('reuse_id', $id)->update($payload);
+            DB::table('wastage_reuse_master')->where('reuse_id', $id)->update($payload['master']);
+            $this->replaceDetails($id, $payload['details']);
             $this->audit->record($request, 'wastage_reuse_master', 'update', $id, $existing, $payload);
 
             return $this->find($request, $id);
@@ -84,6 +89,7 @@ class WastageReuseService
         DB::transaction(function () use ($request, $id): void {
             $existing = $this->scopedForUpdate($request, $id);
             $this->ensureDraft($existing);
+            DB::table('wastage_reuse_detail')->where('reuse_id', $id)->delete();
             DB::table('wastage_reuse_master')->where('reuse_id', $id)->update([
                 'deleted_at' => now(),
                 'updated_by' => $request->user()?->id,
@@ -117,7 +123,7 @@ class WastageReuseService
                 throw ValidationException::withMessages(['consumed_qty' => 'Insufficient available wastage stock.']);
             }
 
-            $stockQty = $this->summary->currentQty((int) $reuse->tenant_id, (int) $reuse->branch_id, (int) $reuse->source_item_id, (int) $reuse->source_location_id);
+            $stockQty = $this->summary->currentQty((int) $reuse->tenant_id, (int) $reuse->branch_id, (int) $reuse->source_item_id, (int) $reuse->source_location_id, 'Wastage');
             if ($stockQty < (float) $reuse->consumed_qty) {
                 throw ValidationException::withMessages(['consumed_qty' => 'Insufficient wastage stock in source location.']);
             }
@@ -129,6 +135,7 @@ class WastageReuseService
                 'location_id' => $reuse->source_location_id,
                 'transaction_date' => $reuse->reuse_date.' 00:00:00',
                 'transaction_type' => 'Wastage Reuse Consumption',
+                'stock_type' => 'Wastage',
                 'reference_id' => $id,
                 'reference_type' => self::REFERENCE_TYPE,
                 'qty_in' => 0,
@@ -136,21 +143,23 @@ class WastageReuseService
                 'user_id' => $request->user()?->id,
             ]);
 
-            $this->transactions->record([
-                'tenant_id' => $reuse->tenant_id,
-                'branch_id' => $reuse->branch_id,
-                'item_id' => $reuse->produced_item_id,
-                'location_id' => $reuse->destination_location_id,
-                'transaction_date' => $reuse->reuse_date.' 00:00:00',
-                'transaction_type' => 'Wastage Reuse Output',
-                'reference_id' => $id,
-                'reference_type' => self::REFERENCE_TYPE,
-                'qty_in' => $reuse->produced_qty,
-                'qty_out' => 0,
-                'rate' => $reuse->produced_qty > 0 ? ((float) $reuse->production_cost / (float) $reuse->produced_qty) : 0,
-                'amount' => $reuse->production_cost,
-                'user_id' => $request->user()?->id,
-            ]);
+            foreach ($this->reuseDetails($id) as $detail) {
+                $this->transactions->record([
+                    'tenant_id' => $reuse->tenant_id,
+                    'branch_id' => $reuse->branch_id,
+                    'item_id' => $detail->item_id,
+                    'location_id' => $reuse->destination_location_id,
+                    'transaction_date' => $reuse->reuse_date.' 00:00:00',
+                    'transaction_type' => 'Wastage Reuse Output',
+                    'reference_id' => $id,
+                    'reference_type' => self::REFERENCE_TYPE,
+                    'qty_in' => $detail->qty,
+                    'qty_out' => 0,
+                    'rate' => $detail->rate,
+                    'amount' => $detail->amount,
+                    'user_id' => $request->user()?->id,
+                ]);
+            }
 
             DB::table('wastage_stock')->where('wastage_stock_id', $source->wastage_stock_id)->update([
                 'available_qty' => (float) $source->available_qty - (float) $reuse->consumed_qty,
@@ -193,6 +202,7 @@ class WastageReuseService
                 'location_id' => $reuse->source_location_id,
                 'transaction_date' => now(),
                 'transaction_type' => 'Wastage Reuse Consumption Reversal',
+                'stock_type' => 'Wastage',
                 'reference_id' => $id,
                 'reference_type' => self::REFERENCE_TYPE,
                 'qty_in' => $reuse->consumed_qty,
@@ -200,19 +210,21 @@ class WastageReuseService
                 'user_id' => $request->user()?->id,
             ]);
 
-            $this->transactions->record([
-                'tenant_id' => $reuse->tenant_id,
-                'branch_id' => $reuse->branch_id,
-                'item_id' => $reuse->produced_item_id,
-                'location_id' => $reuse->destination_location_id,
-                'transaction_date' => now(),
-                'transaction_type' => 'Wastage Reuse Output Reversal',
-                'reference_id' => $id,
-                'reference_type' => self::REFERENCE_TYPE,
-                'qty_in' => 0,
-                'qty_out' => $reuse->produced_qty,
-                'user_id' => $request->user()?->id,
-            ]);
+            foreach ($this->reuseDetails($id) as $detail) {
+                $this->transactions->record([
+                    'tenant_id' => $reuse->tenant_id,
+                    'branch_id' => $reuse->branch_id,
+                    'item_id' => $detail->item_id,
+                    'location_id' => $reuse->destination_location_id,
+                    'transaction_date' => now(),
+                    'transaction_type' => 'Wastage Reuse Output Reversal',
+                    'reference_id' => $id,
+                    'reference_type' => self::REFERENCE_TYPE,
+                    'qty_in' => 0,
+                    'qty_out' => $detail->qty,
+                    'user_id' => $request->user()?->id,
+                ]);
+            }
 
             DB::table('wastage_stock')->where('wastage_stock_id', $source->wastage_stock_id)->update([
                 'available_qty' => (float) $source->available_qty + (float) $reuse->consumed_qty,
@@ -256,6 +268,36 @@ class WastageReuseService
             throw ValidationException::withMessages(['source_wastage_stock_id' => 'Selected wastage stock has no available quantity.']);
         }
 
+        $details = $this->normalizeDetails($data);
+        if ($details === []) {
+            if (empty($data['produced_item_id']) || empty($data['produced_qty'])) {
+                throw ValidationException::withMessages(['details' => 'Add at least one produced item row.']);
+            }
+
+            $producedQty = (float) $data['produced_qty'];
+            $productionCost = (float) ($data['production_cost'] ?? 0);
+            $details = [[
+                'line_no' => 1,
+                'item_id' => (int) $data['produced_item_id'],
+                'qty' => $producedQty,
+                'rate' => $producedQty > 0 ? round($productionCost / $producedQty, 2) : 0,
+                'amount' => $productionCost,
+            ]];
+        }
+
+        $details = collect($details)->map(function (array $line) use ($user): array {
+            $line['created_by'] = $user->id;
+            $line['updated_by'] = $user->id;
+            $line['created_at'] = now();
+            $line['updated_at'] = now();
+
+            return $line;
+        })->all();
+
+        $totalQty = round(array_sum(array_map(fn (array $line): float => (float) $line['qty'], $details)), 3);
+        $totalCost = round(array_sum(array_map(fn (array $line): float => (float) $line['amount'], $details)), 2);
+        $primaryItemId = (int) ($data['produced_item_id'] ?: $details[0]['item_id']);
+
         $payload = [
             'tenant_id' => $user->tenant_id,
             'branch_id' => $branchId,
@@ -265,11 +307,11 @@ class WastageReuseService
             'source_item_id' => $source->item_id,
             'source_location_id' => $source->location_id,
             'consumed_qty' => $data['consumed_qty'],
-            'produced_item_id' => $data['produced_item_id'],
+            'produced_item_id' => $primaryItemId,
             'destination_location_id' => $data['destination_location_id'],
             'team_id' => $data['team_id'] ?? null,
-            'produced_qty' => $data['produced_qty'],
-            'production_cost' => $data['production_cost'] ?? 0,
+            'produced_qty' => $totalQty,
+            'production_cost' => $totalCost,
             'status' => 'Draft',
             'remarks' => $data['remarks'] ?? null,
             'updated_by' => $user->id,
@@ -281,7 +323,62 @@ class WastageReuseService
             $payload['created_at'] = now();
         }
 
-        return $payload;
+        return ['master' => $payload, 'details' => $details];
+    }
+
+    private function normalizeDetails(array $data): array
+    {
+        $details = collect($data['details'] ?? [])
+            ->filter(fn ($line) => is_array($line))
+            ->map(function (array $line, int $index): array {
+                $itemId = (int) ($line['item_id'] ?? 0);
+                $qty = (float) ($line['qty'] ?? 0);
+                $rate = (float) ($line['rate'] ?? 0);
+                $amount = array_key_exists('amount', $line) ? (float) $line['amount'] : round($qty * $rate, 2);
+
+                if ($itemId <= 0) {
+                    throw ValidationException::withMessages(['details' => 'Select an item for every produced row.']);
+                }
+                if ($qty <= 0) {
+                    throw ValidationException::withMessages(['details' => 'Produced item quantity must be greater than zero.']);
+                }
+
+                return [
+                    'line_no' => $index + 1,
+                    'item_id' => $itemId,
+                    'qty' => $qty,
+                    'rate' => $rate,
+                    'amount' => $amount,
+                    'created_by' => null,
+                    'updated_by' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return $details;
+    }
+
+    private function replaceDetails(int $reuseId, array $details): void
+    {
+        DB::table('wastage_reuse_detail')->where('reuse_id', $reuseId)->delete();
+
+        foreach ($details as $detail) {
+            $detail['reuse_id'] = $reuseId;
+            DB::table('wastage_reuse_detail')->insert($detail);
+        }
+    }
+
+    private function reuseDetails(int $reuseId)
+    {
+        return DB::table('wastage_reuse_detail')
+            ->leftJoin('item_master', 'wastage_reuse_detail.item_id', '=', 'item_master.item_id')
+            ->where('wastage_reuse_detail.reuse_id', $reuseId)
+            ->orderBy('wastage_reuse_detail.line_no')
+            ->select('wastage_reuse_detail.*', 'item_master.item_name', 'item_master.item_code')
+            ->get();
     }
 
     private function baseQuery(Request $request)

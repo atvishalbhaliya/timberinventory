@@ -50,6 +50,7 @@ class TeamPaymentController extends Controller
             'data' => [
                 'summary' => $this->payments->find($request, $id),
                 'entries' => $this->payments->paymentHistory($request, $id),
+                'dispatches' => $this->payments->dispatchHistory($request, $id),
             ],
         ]);
     }

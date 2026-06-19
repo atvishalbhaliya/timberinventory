@@ -23,12 +23,17 @@ class StoreWastageReuseRequest extends FormRequest
             'reuse_date' => ['required', 'date'],
             'source_wastage_stock_id' => ['required', 'integer', Rule::exists('wastage_stock', 'wastage_stock_id')->where('tenant_id', $user->tenant_id)->where('branch_id', $branchId)],
             'consumed_qty' => ['required', 'numeric', 'gt:0'],
-            'produced_item_id' => ['required', 'integer', Rule::exists('item_master', 'item_id')->where('tenant_id', $user->tenant_id)->where('status', 'Active')],
+            'produced_item_id' => ['nullable', 'integer', Rule::exists('item_master', 'item_id')->where('tenant_id', $user->tenant_id)->where('status', 'Active')],
             'destination_location_id' => ['required', 'integer', Rule::exists('storage_location_master', 'location_id')->where('tenant_id', $user->tenant_id)->where('branch_id', $branchId)->where('status', 'Active')],
             'team_id' => ['nullable', 'integer', Rule::exists('team_master', 'team_id')->where('tenant_id', $user->tenant_id)->where('branch_id', $branchId)->where('status', 'Active')],
-            'produced_qty' => ['required', 'numeric', 'gt:0'],
+            'produced_qty' => ['nullable', 'numeric', 'gte:0'],
             'production_cost' => ['nullable', 'numeric', 'gte:0'],
             'remarks' => ['nullable', 'string', 'max:2000'],
+            'details' => ['nullable', 'array', 'min:1'],
+            'details.*.item_id' => ['required_with:details', 'integer', Rule::exists('item_master', 'item_id')->where('tenant_id', $user->tenant_id)->where('status', 'Active')],
+            'details.*.qty' => ['required_with:details', 'numeric', 'gt:0'],
+            'details.*.rate' => ['required_with:details', 'numeric', 'gte:0'],
+            'details.*.amount' => ['nullable', 'numeric', 'gte:0'],
         ];
     }
 }

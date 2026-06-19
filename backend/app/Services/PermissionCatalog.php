@@ -65,7 +65,8 @@ class PermissionCatalog
     {
         return [
             ['title' => 'Dashboard', 'path' => '/dashboard', 'section' => 'Dashboard', 'permission' => 'dashboard.view', 'icon' => 'layout-dashboard'],
-            ['title' => 'Item Master', 'path' => '/items', 'section' => 'Master', 'permission' => 'masters.view', 'icon' => 'package'],
+            ['title' => 'Raw Material Items', 'path' => '/raw-material-items', 'section' => 'Master', 'permission' => 'masters.view', 'icon' => 'package'],
+            ['title' => 'Finish Product Items', 'path' => '/finish-product-items', 'section' => 'Master', 'permission' => 'masters.view', 'icon' => 'package-check'],
             ['title' => 'Material Type', 'path' => '/material-types', 'section' => 'Master', 'permission' => 'masters.view', 'icon' => 'layers-3'],
             ['title' => 'UOM Master', 'path' => '/uoms', 'section' => 'Master', 'permission' => 'masters.view', 'icon' => 'ruler'],
             ['title' => 'Location Master', 'path' => '/locations', 'section' => 'Master', 'permission' => 'masters.view', 'icon' => 'map-pin'],

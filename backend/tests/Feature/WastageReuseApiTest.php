@@ -111,7 +111,7 @@ class WastageReuseApiTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ], 'wastage_stock_id');
-        DB::table('stock_summary')->insert(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'item_id' => $wastageItemId, 'location_id' => $wastageLocationId, 'stock_qty' => 5, 'avg_rate' => 0, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('stock_summary')->insert(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'item_id' => $wastageItemId, 'location_id' => $wastageLocationId, 'stock_type' => 'Wastage', 'stock_qty' => 5, 'avg_rate' => 0, 'created_at' => now(), 'updated_at' => now()]);
 
         return [$user, [
             'branch_id' => $branchId,

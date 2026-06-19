@@ -276,7 +276,7 @@ class ProductionService
                     'item_id' => $line->item_id,
                     'location_id' => $line->location_id,
                     'stock_type' => 'Fresh',
-                    'transaction_date' => $production->production_date.' 00:00:00',
+                    'transaction_date' => $this->productionTimestamp($production),
                     'transaction_type' => 'Production Consumption',
                     'reference_id' => $id,
                     'reference_type' => self::REFERENCE_TYPE,
@@ -293,7 +293,7 @@ class ProductionService
                  'team_id' => $production->team_id,
                 'location_id' => $production->fg_location_id,
                 'stock_type' => 'Fresh',
-                'transaction_date' => $production->production_date.' 00:00:00',
+                'transaction_date' => $this->productionTimestamp($production),
                 'transaction_type' => 'Production Output',
                 'reference_id' => $id,
                 'reference_type' => self::REFERENCE_TYPE,
@@ -372,11 +372,11 @@ class ProductionService
                 $this->transactions->record([
                     'tenant_id' => $production->tenant_id,
                     'branch_id' => $production->branch_id,
-                    'item_id' => $line->item_id,
-                    'location_id' => $line->location_id,
-                    'stock_type' => 'Fresh',
-                    'transaction_date' => now(),
-                    'transaction_type' => 'Production Consumption Reversal',
+                'item_id' => $line->item_id,
+                'location_id' => $line->location_id,
+                'stock_type' => 'Fresh',
+                'transaction_date' => now(),
+                'transaction_type' => 'Production Consumption Reversal',
                     'reference_id' => $id,
                     'reference_type' => self::REFERENCE_TYPE,
                     'qty_in' => ((float) $line->consumed_qty) + $wastageQty,
@@ -491,6 +491,7 @@ class ProductionService
             'branch_id' => $branchId,
             'production_no' => $data['production_no'] ?? $this->nextNumber((int) $user->tenant_id, $branchId),
             'production_date' => $data['production_date'],
+            'production_time' => $data['production_time'] ?? null,
             'bom_id' => (int) $data['bom_id'],
             'pallet_model_id' => $data['pallet_model_id'] ?? $bom?->pallet_model_id,
             'produced_item_id' => (int) ($data['produced_item_id'] ?: $bom?->finished_item_id),
@@ -529,6 +530,18 @@ class ProductionService
         $wastages = [];
 
         return ['master' => $master, 'consumptions' => $consumptions, 'wastages' => $wastages];
+    }
+
+    private function productionTimestamp(object $production): string
+    {
+        $time = trim((string) ($production->production_time ?? '00:00:00'));
+        if ($time === '') {
+            $time = '00:00:00';
+        } elseif (strlen($time) === 5) {
+            $time .= ':00';
+        }
+
+        return $production->production_date.' '.$time;
     }
 
     private function replaceRows(int $productionId, array $payload): void
@@ -597,7 +610,7 @@ class ProductionService
                 'item_id' => $line->item_id,
                 'location_id' => $wastageLocationId,
                 'qty' => $wastageQty,
-                'wastage_type' => 'Scrap',
+                'wastage_type' => 'Reusable',
                 'remarks' => $line->remarks ?? null,
                 'created_by' => $request->user()?->id,
                 'updated_by' => $request->user()?->id,
@@ -611,7 +624,7 @@ class ProductionService
                 'item_id' => $line->item_id,
                 'location_id' => $wastageLocationId,
                 'stock_type' => 'Wastage',
-                'transaction_date' => $production->production_date.' 00:00:00',
+                'transaction_date' => $this->productionTimestamp($production),
                 'transaction_type' => 'Production Wastage',
                 'reference_id' => $production->production_id,
                 'reference_type' => self::REFERENCE_TYPE,
@@ -625,7 +638,7 @@ class ProductionService
                 'branch_id' => $production->branch_id,
                 'item_id' => $line->item_id,
                 'location_id' => $wastageLocationId,
-                'wastage_type' => 'Scrap',
+                'wastage_type' => 'Reusable',
                 'source_module' => 'Production',
                 'source_id' => $wastageId,
                 'source_reference' => $production->production_no,

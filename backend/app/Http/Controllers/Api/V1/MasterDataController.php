@@ -100,7 +100,7 @@ class MasterDataController extends Controller
             'key' => 'item_id',
             'title' => 'Item',
             'search' => ['item_code', 'item_name', 'item_type', 'category', 'status'],
-            'columns' => ['item_code', 'item_name', 'item_type', 'material_type_id', 'uom_id', 'length_mm', 'width_mm', 'thickness_mm', 'cft_factor', 'minimum_stock', 'category', 'opening_qty', 'opening_rate', 'status', 'created_at'],
+            'columns' => ['item_code', 'item_name', 'item_type', 'material_type_id', 'uom_id', 'length_mm', 'width_mm', 'thickness_mm', 'cft_factor', 'minimum_stock', 'category', 'opening_qty', 'opening_rate', 'base_rate', 'status', 'created_at'],
             'required' => ['item_name', 'item_type'],
             'tenant_scope' => true,
             'branch_scope' => false,

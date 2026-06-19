@@ -14,6 +14,7 @@ class ProductionResource extends JsonResource
             'branch_id' => $this->branch_id,
             'production_no' => $this->production_no,
             'production_date' => $this->production_date,
+            'production_time' => $this->production_time ?? null,
             'bom_id' => $this->bom_id,
             'bom_no' => $this->bom_no ?? null,
             'bom_name' => $this->bom_name ?? null,

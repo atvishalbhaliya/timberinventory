@@ -77,9 +77,9 @@ class ProductionController extends Controller
 
         return response()->streamDownload(function () use ($rows): void {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Production No', 'Date', 'BOM', 'Team', 'Produced Item', 'Qty', 'Status']);
+            fputcsv($handle, ['Production No', 'Date', 'Time', 'BOM', 'Team', 'Produced Item', 'Qty', 'Status']);
             foreach ($rows as $row) {
-                fputcsv($handle, [$row->production_no, $row->production_date, $row->bom_no, $row->team_name, $row->produced_item_name, $row->produced_qty, $row->status]);
+                fputcsv($handle, [$row->production_no, $row->production_date, $row->production_time, $row->bom_no, $row->team_name, $row->produced_item_name, $row->produced_qty, $row->status]);
             }
             fclose($handle);
         }, 'production.csv', ['Content-Type' => 'text/csv']);

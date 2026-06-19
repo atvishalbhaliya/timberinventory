@@ -83,13 +83,20 @@ class OverAllStockSummaryReportService
         ->join('item_master', 'stock_summary.item_id', '=', 'item_master.item_id')
         ->leftJoin('material_type_master', 'item_master.material_type_id', '=', 'material_type_master.material_type_id')
         ->leftJoin('uom_master', 'item_master.uom_id', '=', 'uom_master.uom_id')
+        ->leftJoin('storage_location_master', 'stock_summary.location_id', '=', 'storage_location_master.location_id')
         ->leftJoin(DB::raw('(
             SELECT
                 item_id,
+                location_id,
+                stock_type,
                 MAX(transaction_date) as last_movement_date
             FROM stock_ledger
-            GROUP BY item_id
-        ) ledger_last'), 'stock_summary.item_id', '=', 'ledger_last.item_id')
+            GROUP BY item_id, location_id, stock_type
+        ) ledger_last'), function ($join): void {
+            $join->on('stock_summary.item_id', '=', 'ledger_last.item_id')
+                ->on('stock_summary.location_id', '=', 'ledger_last.location_id')
+                ->on('stock_summary.stock_type', '=', 'ledger_last.stock_type');
+        })
 
         ->where('stock_summary.tenant_id', $user->tenant_id)
 
@@ -97,11 +104,14 @@ class OverAllStockSummaryReportService
     'item_master.item_id',
     'item_master.item_code',
     'item_master.item_name',
+    'item_master.category',
     'item_master.item_type',
     'item_master.minimum_stock',
 
     'material_type_master.material_type_name',
     'uom_master.uom_name',
+    'stock_summary.location_id',
+    'storage_location_master.location_name',
 
     DB::raw('SUM(stock_summary.stock_qty) as available_qty'),
     DB::raw('AVG(stock_summary.avg_rate) as avg_rate'),
@@ -113,10 +123,13 @@ class OverAllStockSummaryReportService
     'item_master.item_id',
     'item_master.item_code',
     'item_master.item_name',
+    'item_master.category',
     'item_master.item_type',
     'item_master.minimum_stock',
     'material_type_master.material_type_name',
-    'uom_master.uom_name'
+    'uom_master.uom_name',
+    'stock_summary.location_id',
+    'storage_location_master.location_name'
 ]);
 
     // -----------------------------
@@ -176,6 +189,7 @@ class OverAllStockSummaryReportService
     $sortMap = [
         'item_code' => 'item_master.item_code',
         'item_name' => 'item_master.item_name',
+        'category' => 'item_master.category',
         'material_type_name' => 'material_type_master.material_type_name',
         'uom_name' => 'uom_master.uom_name',
         'available_qty' => DB::raw('SUM(stock_summary.stock_qty)'),
@@ -199,8 +213,9 @@ class OverAllStockSummaryReportService
 {
     $columns = [
         'item_code'          => 'item_master.item_code',
-        'item_name'          => 'item_master.item_name',
         'item_type'          => 'item_master.item_type',
+        'category'           => 'item_master.category',
+        'item_name'          => 'item_master.item_name',
         'material_type_name' => 'material_type_master.material_type_name',
         'uom_name'           => 'uom_master.uom_name',
         'last_movement_date' => 'ledger_last.last_movement_date',

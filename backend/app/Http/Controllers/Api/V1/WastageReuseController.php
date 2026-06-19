@@ -67,9 +67,11 @@ class WastageReuseController extends Controller
 
         return response()->streamDownload(function () use ($rows): void {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Reuse No', 'Date', 'Source Item', 'Consumed Qty', 'Produced Item', 'Produced Qty', 'Status']);
+            fputcsv($handle, ['Reuse No', 'Date', 'Reusable Wastage', 'Consumed Qty', 'Produced Item', 'Produced Qty', 'Status']);
             foreach ($rows as $row) {
-                fputcsv($handle, [$row->reuse_no, $row->reuse_date, $row->source_item_name, $row->consumed_qty, $row->produced_item_name, $row->produced_qty, $row->status]);
+                $source = trim(($row->source_item_name ?? '').' / '.($row->source_location_name ?? ''));
+
+                fputcsv($handle, [$row->reuse_no, $row->reuse_date, trim($source, ' /'), $row->consumed_qty, $row->produced_item_name, $row->produced_qty, $row->status]);
             }
             fclose($handle);
         }, 'wastage-reuse.csv', ['Content-Type' => 'text/csv']);
